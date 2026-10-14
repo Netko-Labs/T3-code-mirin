@@ -48,3 +48,5 @@ node_modules/
 
 # mirin dev artifacts (apps/desktop-mirin)
 .mirin/
+# agent work artifacts stay out of the tree (AGENTS.md → Plans and work artifacts)
+tasks/
