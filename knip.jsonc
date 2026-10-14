@@ -5,7 +5,7 @@
   // These executables are supplied by the OS or installed separately from npm.
   "ignoreBinaries": ["eas", "file", "mkfifo", "pkill", "pkg-config", "plutil", "sips"],
   // Mobile, marketing and the relay are outside this fork's workspace (plan: desktop on mirin).
-  "ignore": ["apps/mobile/**", "apps/marketing/**", "infra/**"],
+  "ignore": ["apps/mobile/**", "apps/marketing/**", "infra/**", "apps/desktop-mirin/vendor/**"],
   "workspaces": {
     ".": {
       // Keep vendored reference repositories outside the root project.

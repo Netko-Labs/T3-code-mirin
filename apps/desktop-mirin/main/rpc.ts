@@ -1,11 +1,16 @@
 import * as NodePath from "node:path";
 import {
+  type ClientSettings,
   type ContextMenuItemSchemaType,
   type DesktopAppActivationRequest,
   type DesktopAppActivationResponse,
+  type DesktopSnapShotEvent,
+  type DesktopSnapShotSetupAction,
   type PickFolderOptions,
   REMOTE_CAPABLE_EDITOR_IDS,
   remoteSchemeForEditor,
+  type SnapShotShortcut,
+  type SystemSettingsPane,
 } from "@t3tools/contracts";
 import {
   cancelCodexAuthCallback,
@@ -16,6 +21,7 @@ import { rpc } from "mirinjs/rpc";
 
 import { cliCommandState, installCliCommand, uninstallCliCommand } from "./cli.ts";
 import { readJsonFile, userDataDir, writeJsonFile } from "./settings.ts";
+import type { SnapShotController, SnapShotSettings } from "./snapshot.ts";
 import { shell } from "./state.ts";
 
 export const T3_HOME =
@@ -28,6 +34,7 @@ const OPEN_EXTERNAL_SCHEMES = new Set([
   "http:",
   "https:",
   "mailto:",
+  "x-apple.systempreferences:",
   ...REMOTE_CAPABLE_EDITOR_IDS.flatMap((id) => {
     const scheme = remoteSchemeForEditor(id);
     return scheme === undefined ? [] : [`${scheme}:`];
@@ -44,6 +51,32 @@ async function openExternal(url: string): Promise<boolean> {
   if (!OPEN_EXTERNAL_SCHEMES.has(parsed.protocol)) return false;
   const proc = Bun.spawn(["open", parsed.href], { stdout: "ignore", stderr: "ignore" });
   return (await proc.exited) === 0;
+}
+
+type MacPrivacyPane = SystemSettingsPane | "screen-recording" | "accessibility";
+
+// Apple's Privacy & Security panes the shell deep-links to.
+const SYSTEM_SETTINGS_URLS: Record<MacPrivacyPane, string> = {
+  "full-disk-access": "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles",
+  "screen-recording":
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+  accessibility: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+};
+
+/** The SnapShot slice of the client settings file, with the schema defaults. */
+export function snapShotSettings(settings: unknown): SnapShotSettings {
+  const value = (settings ?? {}) as Partial<ClientSettings>;
+  return {
+    enabled: value.snapShotEnabled ?? false,
+    shortcut: value.snapShotShortcut ?? { kind: "both-shift-keys" },
+    playSound: value.snapShotPlaySound ?? true,
+  };
+}
+
+function snapShots(): SnapShotController {
+  const controller = shell.snapShots;
+  if (!controller) throw new Error("SnapShots are not available on this platform.");
+  return controller;
 }
 
 function backend() {
@@ -74,13 +107,45 @@ export const router = rpc.router({
   menuAction: rpc.event<{ action: string }>(),
   webLinkOpen: rpc.event<{ url: string }>(),
   appActivationRequest: rpc.event<DesktopAppActivationRequest>(),
+  snapShotEvent: rpc.event<DesktopSnapShotEvent>(),
 
   getBearerToken: rpc.query(async (_: null) => backend().bearerToken()),
 
   getClientSettings: rpc.query(async (_: null) => readJsonFile(CLIENT_SETTINGS_FILE)),
-  setClientSettings: rpc.mutation(async (settings: unknown) =>
-    writeJsonFile(CLIENT_SETTINGS_FILE, settings),
+  setClientSettings: rpc.mutation(async (settings: unknown) => {
+    await writeJsonFile(CLIENT_SETTINGS_FILE, settings);
+    await shell.snapShots?.configure(snapShotSettings(settings));
+  }),
+
+  openSystemSettings: rpc.mutation(async (pane: SystemSettingsPane) =>
+    openExternal(SYSTEM_SETTINGS_URLS[pane]),
   ),
+  // Full Disk Access has no reliable probe without touching a protected path.
+  checkSystemPermission: rpc.query(async (_pane: SystemSettingsPane) => false),
+
+  snapShotState: rpc.query(async (_: null) => snapShots().state()),
+  snapShotSetup: rpc.mutation(async (action: DesktopSnapShotSetupAction) => {
+    if (action === "test-mac-capture") await snapShots().captureNow();
+    else if (action === "allow-screen-recording")
+      await openExternal(SYSTEM_SETTINGS_URLS["screen-recording"]);
+    else if (action === "allow-accessibility")
+      await openExternal(SYSTEM_SETTINGS_URLS.accessibility);
+    else if (action === "retry-shortcut")
+      await snapShots().configure(snapShotSettings(await readJsonFile(CLIENT_SETTINGS_FILE)));
+  }),
+  snapShotRequestPermissions: rpc.mutation(async (includeAccessibility: boolean) => {
+    await openExternal(SYSTEM_SETTINGS_URLS["screen-recording"]);
+    if (includeAccessibility) await openExternal(SYSTEM_SETTINGS_URLS.accessibility);
+  }),
+  snapShotCheckShortcut: rpc.query(async (shortcut: SnapShotShortcut) =>
+    snapShots().checkShortcut(shortcut),
+  ),
+  snapShotSetSuppressed: rpc.mutation(async (suppressed: boolean) =>
+    snapShots().setSuppressed(suppressed),
+  ),
+  snapShotListPending: rpc.query(async (_: null) => snapShots().listPending()),
+  snapShotRead: rpc.query(async (id: string) => snapShots().read(id)),
+  snapShotAcknowledge: rpc.mutation(async (id: string) => snapShots().acknowledge(id)),
 
   pickFolder: rpc.mutation(async (_options: PickFolderOptions | null) => {
     const picked = await dialog.openFile({ directories: true, message: "Choose a project folder" });
