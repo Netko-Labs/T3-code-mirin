@@ -1,10 +1,10 @@
-import { mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import * as NodeFSP from "node:fs/promises";
+import * as NodePath from "node:path";
 
 // Mirrors the Electron shell's file layout under T3CODE_HOME so a later
 // migration is a copy, not a translation.
 export function userDataDir(home: string): string {
-  return join(home, "userdata");
+  return NodePath.join(home, "userdata");
 }
 
 export async function readJsonFile(path: string): Promise<unknown | null> {
@@ -18,9 +18,8 @@ export async function readJsonFile(path: string): Promise<unknown | null> {
 }
 
 export async function writeJsonFile(path: string, value: unknown): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
+  await NodeFSP.mkdir(NodePath.dirname(path), { recursive: true });
   const tmp = `${path}.${crypto.randomUUID()}.tmp`;
   await Bun.write(tmp, `${JSON.stringify(value, null, 2)}\n`);
-  const { rename } = await import("node:fs/promises");
-  await rename(tmp, path);
+  await NodeFSP.rename(tmp, path);
 }

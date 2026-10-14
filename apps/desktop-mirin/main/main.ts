@@ -1,3 +1,4 @@
+import * as NodeOS from "node:os";
 import { app } from "mirinjs";
 
 import { startBackend } from "./backend.ts";
@@ -14,6 +15,7 @@ function uiUrl(): string {
   if (!backend) throw new Error("backend not started");
   const boot = {
     branding: { baseName: "T3 Code", stageLabel: "Dev", displayName: "T3 Code Mirin" },
+    // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
     platform: process.platform,
     locale: Intl.DateTimeFormat().resolvedOptions().locale,
     bootstraps: [backend.primaryBootstrap()],
@@ -28,7 +30,7 @@ app.on("ready", async () => {
   try {
     shell.backend = await startBackend({
       home: T3_HOME,
-      label: (await import("node:os")).hostname(),
+      label: NodeOS.hostname(),
       onStatus: (message) => {
         console.log(`[shell] ${message}`);
         mirin.rpc.backendStatus.broadcast({ message });

@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import * as NodePath from "node:path";
 import { bootstrapRemoteBearerSession } from "@t3tools/client-runtime/authorization";
 import type { DesktopBackendBootstrap, DesktopEnvironmentBootstrap } from "@t3tools/contracts";
 import { PRIMARY_LOCAL_ENVIRONMENT_ID } from "@t3tools/contracts";
@@ -80,8 +80,8 @@ function pipeLines(stream: ReadableStream<Uint8Array>, prefix: string): void {
 
 /** Dev: the server runs from source with bun. Packaged builds will ship a sidecar. */
 function serverEntry(): { cwd: string; entry: string } {
-  const cwd = resolve(process.cwd(), "..", "server");
-  return { cwd, entry: resolve(cwd, "src", "bin.ts") };
+  const cwd = NodePath.resolve(process.cwd(), "..", "server");
+  return { cwd, entry: NodePath.resolve(cwd, "src", "bin.ts") };
 }
 
 export async function startBackend(options: StartBackendOptions): Promise<BackendHandle> {
