@@ -8,6 +8,7 @@ import { installApplicationMenu } from "./menu.ts";
 import { router, snapShotSettings, T3_HOME } from "./rpc.ts";
 import { readJsonFile, userDataDir } from "./settings.ts";
 import { SnapShotController } from "./snapshot.ts";
+import { UpdateBridge } from "./updates.ts";
 import { shell } from "./state.ts";
 
 const mirin = app.serve(router);
@@ -43,6 +44,9 @@ function uiUrl(): string {
 
 app.on("ready", async () => {
   installApplicationMenu(broadcastMenuAction);
+  const updates = new UpdateBridge();
+  updates.onChange((state) => mirin.rpc.updateStateChanged.broadcast(state));
+  shell.updates = updates;
   // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
   if (process.platform === "darwin") {
     const controller = new SnapShotController(T3_HOME, (event) =>

@@ -6,6 +6,8 @@ import {
   type DesktopAppActivationResponse,
   type DesktopSnapShotEvent,
   type DesktopSnapShotSetupAction,
+  type DesktopUpdateChannel,
+  type DesktopUpdateState,
   type PickFolderOptions,
   REMOTE_CAPABLE_EDITOR_IDS,
   remoteSchemeForEditor,
@@ -22,6 +24,7 @@ import { rpc } from "mirinjs/rpc";
 import { cliCommandState, installCliCommand, uninstallCliCommand } from "./cli.ts";
 import { readJsonFile, userDataDir, writeJsonFile } from "./settings.ts";
 import type { SnapShotController, SnapShotSettings } from "./snapshot.ts";
+import type { UpdateBridge } from "./updates.ts";
 import { shell } from "./state.ts";
 
 export const T3_HOME =
@@ -73,6 +76,12 @@ export function snapShotSettings(settings: unknown): SnapShotSettings {
   };
 }
 
+function updates(): UpdateBridge {
+  const bridge = shell.updates;
+  if (!bridge) throw new Error("The updater is not initialized.");
+  return bridge;
+}
+
 function snapShots(): SnapShotController {
   const controller = shell.snapShots;
   if (!controller) throw new Error("SnapShots are not available on this platform.");
@@ -108,6 +117,7 @@ export const router = rpc.router({
   webLinkOpen: rpc.event<{ url: string }>(),
   appActivationRequest: rpc.event<DesktopAppActivationRequest>(),
   snapShotEvent: rpc.event<DesktopSnapShotEvent>(),
+  updateStateChanged: rpc.event<DesktopUpdateState>(),
 
   getBearerToken: rpc.query(async (_: null) => backend().bearerToken()),
 
@@ -146,6 +156,13 @@ export const router = rpc.router({
   snapShotListPending: rpc.query(async (_: null) => snapShots().listPending()),
   snapShotRead: rpc.query(async (id: string) => snapShots().read(id)),
   snapShotAcknowledge: rpc.mutation(async (id: string) => snapShots().acknowledge(id)),
+
+  updateState: rpc.query(async (_: null) => updates().state()),
+  // The channel is baked into the build by mirin release; reported, not switchable.
+  updateSetChannel: rpc.mutation(async (_channel: DesktopUpdateChannel) => updates().state()),
+  updateCheck: rpc.mutation(async (_: null) => updates().check()),
+  updateDownload: rpc.mutation(async (_: null) => updates().download()),
+  updateInstall: rpc.mutation(async (_: null) => updates().install()),
 
   pickFolder: rpc.mutation(async (_options: PickFolderOptions | null) => {
     const picked = await dialog.openFile({ directories: true, message: "Choose a project folder" });

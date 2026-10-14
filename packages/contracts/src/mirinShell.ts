@@ -11,6 +11,10 @@ import type {
   DesktopSnapShotSetupAction,
   DesktopSnapShotShortcutAvailability,
   DesktopSnapShotState,
+  DesktopUpdateActionResult,
+  DesktopUpdateChannel,
+  DesktopUpdateCheckResult,
+  DesktopUpdateState,
   PickFolderOptions,
   SystemSettingsPane,
 } from "./ipc.ts";
@@ -52,6 +56,11 @@ export interface MirinShellRpc {
   readonly snapShotListPending: (input: null) => Promise<readonly DesktopPendingSnapShot[]>;
   readonly snapShotRead: (id: string) => Promise<DesktopSnapShot>;
   readonly snapShotAcknowledge: (id: string) => Promise<void>;
+  readonly updateState: (input: null) => Promise<DesktopUpdateState>;
+  readonly updateSetChannel: (channel: DesktopUpdateChannel) => Promise<DesktopUpdateState>;
+  readonly updateCheck: (input: null) => Promise<DesktopUpdateCheckResult>;
+  readonly updateDownload: (input: null) => Promise<DesktopUpdateActionResult>;
+  readonly updateInstall: (input: null) => Promise<DesktopUpdateActionResult>;
 }
 
 export interface MirinShellEvents {
@@ -60,6 +69,7 @@ export interface MirinShellEvents {
   readonly webLinkOpen: { readonly url: string };
   readonly appActivationRequest: DesktopAppActivationRequest;
   readonly snapShotEvent: DesktopSnapShotEvent;
+  readonly updateStateChanged: DesktopUpdateState;
 }
 
 /** `window.mirin`, installed by mirin's preload bootstrap before page scripts run. */
