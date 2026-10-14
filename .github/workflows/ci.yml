@@ -43,6 +43,21 @@ jobs:
         with:
           bun-version-file: package.json
 
+      # apps/desktop-mirin depends on mirinjs / @mirinjs/cli through bun link; the
+      # packages come from the mirin repo until an alpha with everything it needs ships.
+      - name: Checkout mirin (linked dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: Netko-Labs/mirin
+          ref: main
+          path: .mirin-dep
+
+      - name: Link mirin packages
+        run: |
+          (cd .mirin-dep && bun install --frozen-lockfile)
+          (cd .mirin-dep/packages/mirin && bun link)
+          (cd .mirin-dep/packages/mirin-cli && bun link)
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -77,6 +92,21 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+
+      # apps/desktop-mirin depends on mirinjs / @mirinjs/cli through bun link; the
+      # packages come from the mirin repo until an alpha with everything it needs ships.
+      - name: Checkout mirin (linked dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: Netko-Labs/mirin
+          ref: main
+          path: .mirin-dep
+
+      - name: Link mirin packages
+        run: |
+          (cd .mirin-dep && bun install --frozen-lockfile)
+          (cd .mirin-dep/packages/mirin && bun link)
+          (cd .mirin-dep/packages/mirin-cli && bun link)
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
@@ -138,6 +168,21 @@ jobs:
         with:
           bun-version-file: package.json
 
+      # apps/desktop-mirin depends on mirinjs / @mirinjs/cli through bun link; the
+      # packages come from the mirin repo until an alpha with everything it needs ships.
+      - name: Checkout mirin (linked dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: Netko-Labs/mirin
+          ref: main
+          path: .mirin-dep
+
+      - name: Link mirin packages
+        run: |
+          (cd .mirin-dep && bun install --frozen-lockfile)
+          (cd .mirin-dep/packages/mirin && bun link)
+          (cd .mirin-dep/packages/mirin-cli && bun link)
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -184,6 +229,21 @@ jobs:
         with:
           bun-version-file: package.json
 
+      # apps/desktop-mirin depends on mirinjs / @mirinjs/cli through bun link; the
+      # packages come from the mirin repo until an alpha with everything it needs ships.
+      - name: Checkout mirin (linked dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: Netko-Labs/mirin
+          ref: main
+          path: .mirin-dep
+
+      - name: Link mirin packages
+        run: |
+          (cd .mirin-dep && bun install --frozen-lockfile)
+          (cd .mirin-dep/packages/mirin && bun link)
+          (cd .mirin-dep/packages/mirin-cli && bun link)
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -221,6 +281,21 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+
+      # apps/desktop-mirin depends on mirinjs / @mirinjs/cli through bun link; the
+      # packages come from the mirin repo until an alpha with everything it needs ships.
+      - name: Checkout mirin (linked dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: Netko-Labs/mirin
+          ref: main
+          path: .mirin-dep
+
+      - name: Link mirin packages
+        run: |
+          (cd .mirin-dep && bun install --frozen-lockfile)
+          (cd .mirin-dep/packages/mirin && bun link)
+          (cd .mirin-dep/packages/mirin-cli && bun link)
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
