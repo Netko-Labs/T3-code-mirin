@@ -53,6 +53,8 @@ flowchart LR
 ## mirin work this port needed or still needs
 
 - `WindowHandle.loadUrl` on a live browser — landed (mirin#9).
-- `bootData` per window; `menu.popup` resolution; main-process console capture in the dev stream;
-  origin-scoped preload; `shell.openExternal`, `secureStorage`, `app.theme`, dock badge, fullscreen
+- Worker `console` output printing under the host and landing in the dev stream — landed (mirin#13).
+- Signing Mach-O files inside resource dirs for notarization — landed (mirin#12).
+- The updater offering only versions newer than the running one — mirin#14.
+- `bootData` per window; `menu.popup` resolution; origin-scoped preload; `shell.openExternal`, `secureStorage`, `app.theme`, dock badge, fullscreen
   events; multi-webview with partitions and a per-view DevTools bridge.
