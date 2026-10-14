@@ -24,6 +24,6 @@
     "@mirinjs/cli": "link:@mirinjs/cli",
     "bun-types": "^1.3.0",
     "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "vite": "catalog:"
   }
 }
