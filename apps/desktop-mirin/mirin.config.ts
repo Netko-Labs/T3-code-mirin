@@ -13,7 +13,14 @@ export default defineConfig({
     baseUrl: "https://github.com/Netko-Labs/T3-code-mirin/releases/latest/download",
     channel: "stable",
   },
-  sidecars: { bun: "vendor/bun" },
+  // bun JITs and dlopens the server's .node addons (signed by us, not Apple):
+  // without these the hardened-runtime sidecar dies on first addon load.
+  sidecars: {
+    bun: {
+      bin: "vendor/bun",
+      entitlements: ["allow-jit", "allow-unsigned-executable-memory", "disable-library-validation"],
+    },
+  },
   resources: { server: "vendor/server" },
   windows: {
     main: {

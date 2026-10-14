@@ -85,6 +85,7 @@ interface ServerLaunch {
   readonly command: string;
   readonly cwd: string;
   readonly entry: string;
+  readonly preload: string;
 }
 
 // Dev (`mirin dev`) runs apps/server from source with the developer's bun;
@@ -92,10 +93,20 @@ interface ServerLaunch {
 function serverLaunch(): ServerLaunch {
   if (process.env["MIRIN_DEV_URL"] !== undefined) {
     const cwd = NodePath.resolve(process.cwd(), "..", "server");
-    return { command: "bun", cwd, entry: NodePath.resolve(cwd, "src", "bin.ts") };
+    return {
+      command: "bun",
+      cwd,
+      entry: NodePath.resolve(cwd, "src", "bin.ts"),
+      preload: NodePath.resolve(import.meta.dir, "..", "server", "watchdog.ts"),
+    };
   }
   const cwd = resolveResource("server");
-  return { command: resolveSidecar("bun"), cwd, entry: NodePath.join(cwd, "bin.js") };
+  return {
+    command: resolveSidecar("bun"),
+    cwd,
+    entry: NodePath.join(cwd, "bin.js"),
+    preload: NodePath.join(cwd, "watchdog.js"),
+  };
 }
 
 export async function startBackend(options: StartBackendOptions): Promise<BackendHandle> {
@@ -116,15 +127,17 @@ export async function startBackend(options: StartBackendOptions): Promise<Backen
     tailscaleServePort: 443,
   };
 
-  const { command, cwd, entry } = serverLaunch();
+  const { command, cwd, entry, preload } = serverLaunch();
   options.onStatus(`Starting the backend on port ${port}…`);
-  const proc = Bun.spawn([command, entry, "serve", "--bootstrap-fd", "0"], {
+  const proc = Bun.spawn([command, "--preload", preload, entry, "serve", "--bootstrap-fd", "0"], {
     cwd,
     env: {
       ...process.env,
       T3CODE_HOME: options.home,
       // The fork must not report into upstream's product analytics.
       T3CODE_TELEMETRY_ENABLED: "false",
+      // Read by server/watchdog.ts so the backend follows the host down.
+      T3CODE_MIRIN_HOST_PID: String(process.pid),
     },
     stdin: new Blob([`${JSON.stringify(envelope)}\n`]),
     stdout: "pipe",

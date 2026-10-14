@@ -11,6 +11,7 @@
     "check": "mirin check",
     "doctor": "mirin doctor",
     "build": "bun run stage && mirin build",
+    "release": "bun run stage && mirin release",
     "typecheck": "tsc-rs --noEmit",
     "stage": "bun scripts/stage-server.ts"
   },

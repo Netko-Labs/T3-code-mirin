@@ -47,8 +47,7 @@ flowchart LR
 
 - SnapShot "include app text" (accessibility tree) and the fly-in animation; the picture-in-picture viewer, cookie import, passkeys.
 - SSH environments, WSL, Tailscale exposure: the bridge answers with empty/local-only state.
-- Auto-update: the bridge reports updates disabled until `release.baseUrl` and a signing identity exist for `mirin release`.
-- Notarization: the packaged app is ad-hoc signed; the `.node` addons inside the server resource are unsigned.
+- Auto-update and notarization: `bun run release` in `apps/desktop-mirin` needs `MIRIN_SIGN_IDENTITY` and the `MIRIN_NOTARY_*` variables (README there); mirin signs the server's `.node` addons with the bundle (mirin#12). Releases are manual uploads to GitHub Releases; there is no release workflow in CI yet.
 - T3 Connect (Clerk), relay, mobile, marketing: outside this fork.
 
 ## mirin work this port needed or still needs

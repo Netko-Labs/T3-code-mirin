@@ -42,6 +42,10 @@ const externals = EXTERNAL_PATTERNS.flatMap((pattern) => ["--external", pattern]
 await $`bun build ${NodePath.join(serverDir, "src", "bin.ts")} ${NodePath.join(serverDir, "src", "claude-history-worker.ts")} --target=bun --outdir ${out} ${externals}`.cwd(
   serverDir,
 );
+console.log("[stage] bundling the host watchdog…");
+await $`bun build ${NodePath.join(appDir, "server", "watchdog.ts")} --target=bun --outfile ${NodePath.join(out, "watchdog.js")}`.cwd(
+  appDir,
+);
 
 const serverPackage = (await Bun.file(NodePath.join(serverDir, "package.json")).json()) as {
   version: string;
