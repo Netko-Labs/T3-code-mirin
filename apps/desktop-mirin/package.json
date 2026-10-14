@@ -20,10 +20,10 @@
     "@t3tools/contracts": "workspace:*",
     "@t3tools/shared": "workspace:*",
     "effect": "catalog:",
-    "mirinjs": "link:mirinjs"
+    "mirinjs": "0.1.0-alpha.26"
   },
   "devDependencies": {
-    "@mirinjs/cli": "link:@mirinjs/cli",
+    "@mirinjs/cli": "0.1.0-alpha.26",
     "bun-types": "^1.3.0",
     "typescript": "catalog:",
     "vite": "catalog:"
