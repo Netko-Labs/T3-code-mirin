@@ -63,6 +63,10 @@
       // electron-builder from this workspace, outside its package scripts.
       "ignoreDependencies": ["playwright-core", "electron-builder"],
     },
+    "apps/desktop-mirin": {
+      // mirin bundles the main process and reads the manifest by filename.
+      "entry": ["main/main.ts!", "mirin.config.ts!", "ui/splash.ts!"],
+    },
     "apps/web": {
       // Vitest loads this through the per-file @vitest-environment directive.
       "ignoreDependencies": ["jsdom"],

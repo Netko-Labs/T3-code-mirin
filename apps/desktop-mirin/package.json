@@ -1,0 +1,29 @@
+{
+  "name": "@t3tools/desktop-mirin",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./router": "./main/rpc.ts"
+  },
+  "scripts": {
+    "dev": "mirin dev",
+    "check": "mirin check",
+    "doctor": "mirin doctor",
+    "build": "mirin build",
+    "typecheck": "tsc-rs --noEmit"
+  },
+  "dependencies": {
+    "@t3tools/client-runtime": "workspace:*",
+    "@t3tools/contracts": "workspace:*",
+    "@t3tools/shared": "workspace:*",
+    "effect": "catalog:",
+    "mirinjs": "link:mirinjs"
+  },
+  "devDependencies": {
+    "@mirinjs/cli": "link:@mirinjs/cli",
+    "bun-types": "^1.3.0",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}
