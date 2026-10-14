@@ -25,7 +25,7 @@ bun run build        # stage-server.ts, then mirin build → build/T3 Code Mirin
 
 `scripts/stage-server.ts` bundles the server with `bun build`, installs its native externals
 (Cursor SDK, Playwright, keyring, fff) into `vendor/server/node_modules`, copies the web build to
-`vendor/server/client`, and copies the host's `bun` to `vendor/bun`. `mirin.config.ts` ships
+`vendor/server/client`, and copies the `bun` running it to `vendor/bun`. `mirin.config.ts` ships
 `vendor/server` as a resource and `vendor/bun` as a sidecar; the packaged shell runs
 `bun --preload watchdog.js bin.js serve` from there (the watchdog exits the server when the host
 that spawned it is gone).

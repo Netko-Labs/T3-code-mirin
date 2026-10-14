@@ -77,7 +77,16 @@ NodeFS.rmSync(NodePath.join(out, "node_modules", ".bin"), { recursive: true, for
 console.log("[stage] copying the web build…");
 NodeFS.cpSync(webDist, NodePath.join(out, "client"), { recursive: true });
 
-const bunBinary = Bun.which("bun") ?? process.execPath;
+// The bun running this script, never a PATH lookup: version-manager shims
+// (setup-vp on CI) are shell scripts that exec a bun.native we would not ship.
+const bunBinary = NodeFS.realpathSync(process.execPath);
+const header = Buffer.alloc(2);
+const fd = NodeFS.openSync(bunBinary, "r");
+NodeFS.readSync(fd, header, 0, 2, 0);
+NodeFS.closeSync(fd);
+if (header.toString() === "#!") {
+  throw new Error(`${bunBinary} is a shim script, not the bun binary`);
+}
 NodeFS.copyFileSync(bunBinary, NodePath.join(vendor, "bun"));
 NodeFS.chmodSync(NodePath.join(vendor, "bun"), 0o755);
 
