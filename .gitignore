@@ -56,3 +56,6 @@ tasks/
 
 # staged server + bun for the packaged mirin app
 apps/desktop-mirin/vendor/
+
+# bun build temp files
+*.bun-build
