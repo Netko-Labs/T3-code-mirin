@@ -97,21 +97,19 @@ describe("selectCliRuntimeExternalDependencies", () => {
 // required detect-libc, which was bundled. Windows was fine; WSL got
 // MODULE_NOT_FOUND.
 it.layer(NodeServices.layer)("external package dependency closure", (it) => {
-  // Read manifests off disk from the pnpm store rather than resolving them.
-  // `require("<name>/package.json")` cannot do this job: under pnpm isolation a
-  // transitive package (node-addon-api, ffi-rs) is not reachable
-  // by name from this file at all, and an `exports` map can refuse the
-  // `/package.json` subpath outright (@ff-labs/fff-node). Both surface as "not
-  // installed", which would let this test skip everything and pass while
-  // checking nothing. The store contains the dependency graph the sidecar's
-  // minimal production install resolves.
+  // Read manifests off disk rather than resolving them: an `exports` map can
+  // refuse the `/package.json` subpath outright (@ff-labs/fff-node), which
+  // would surface as "not installed" and let this test pass while checking
+  // nothing. node_modules holds the dependency graph the sidecar's minimal
+  // production install resolves.
   const readInstalledPackages = Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const storeDir = path.resolve(
+    const rootModulesDir = path.resolve(
       path.dirname(NodeURL.fileURLToPath(import.meta.url)),
-      "../../node_modules/.pnpm",
+      "../../node_modules",
     );
+    const storeDir = path.join(rootModulesDir, ".pnpm");
 
     // The store holds regular files too (lock.yaml), so a path built under one
     // raises ENOTDIR rather than reporting absence. That throws on Linux while
@@ -121,25 +119,32 @@ it.layer(NodeServices.layer)("external package dependency closure", (it) => {
       fileSystem.exists(candidate).pipe(Effect.orElseSucceed(() => false));
 
     const installed = new Map<string, PackageManifest>();
-    if (!(yield* isPresent(storeDir))) return installed;
+    const readModulesDir = (modulesDir: string) =>
+      Effect.gen(function* () {
+        for (const owner of yield* fileSystem.readDirectory(modulesDir)) {
+          if (owner.startsWith(".")) continue;
+          const names = owner.startsWith("@")
+            ? (yield* fileSystem.readDirectory(path.join(modulesDir, owner))).map(
+                (scoped) => `${owner}/${scoped}`,
+              )
+            : [owner];
 
-    for (const entry of yield* fileSystem.readDirectory(storeDir)) {
-      const modulesDir = path.join(storeDir, entry, "node_modules");
-      if (!(yield* isPresent(modulesDir))) continue;
-
-      for (const owner of yield* fileSystem.readDirectory(modulesDir)) {
-        const names = owner.startsWith("@")
-          ? (yield* fileSystem.readDirectory(path.join(modulesDir, owner))).map(
-              (scoped) => `${owner}/${scoped}`,
-            )
-          : [owner];
-
-        for (const name of names) {
-          if (installed.has(name)) continue;
-          const manifestPath = path.join(modulesDir, name, "package.json");
-          if (!(yield* isPresent(manifestPath))) continue;
-          installed.set(name, decodeManifest(yield* fileSystem.readFileString(manifestPath)));
+          for (const name of names) {
+            if (installed.has(name)) continue;
+            const manifestPath = path.join(modulesDir, name, "package.json");
+            if (!(yield* isPresent(manifestPath))) continue;
+            installed.set(name, decodeManifest(yield* fileSystem.readFileString(manifestPath)));
+          }
         }
+      });
+
+    // bun's hoisted linker puts the whole graph under the root node_modules;
+    // a pnpm checkout keeps it in the store. Read whichever exists.
+    if (yield* isPresent(rootModulesDir)) yield* readModulesDir(rootModulesDir);
+    if (yield* isPresent(storeDir)) {
+      for (const entry of yield* fileSystem.readDirectory(storeDir)) {
+        const modulesDir = path.join(storeDir, entry, "node_modules");
+        if (yield* isPresent(modulesDir)) yield* readModulesDir(modulesDir);
       }
     }
     return installed;
@@ -165,7 +170,7 @@ it.layer(NodeServices.layer)("external package dependency closure", (it) => {
         for (const required of ["node-pty", "node-addon-api"]) {
           assert.ok(
             found.includes(required),
-            `expected ${required} in the pnpm store; the closure check is only meaningful if it can read these (found ${found.length})`,
+            `expected ${required} in node_modules; the closure check is only meaningful if it can read these (found ${found.length})`,
           );
         }
       }),
