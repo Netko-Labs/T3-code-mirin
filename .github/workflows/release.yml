@@ -40,6 +40,8 @@ jobs:
     name: Resolve release commit
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      SIGNING_AVAILABLE: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
     outputs:
       ref: ${{ steps.resolve.outputs.ref }}
       nightly_version: ${{ steps.resolve.outputs.nightly_version }}
@@ -76,7 +78,13 @@ jobs:
             await assertReleaseSource({ github, context, releaseChannel });
 
             if (context.eventName === 'schedule') {
-              core.setOutput('has_changes', await shouldReleaseNightly({ github, context, core }));
+              // An unsigned nightly cannot be updated into; dispatch one by hand to test the pipeline.
+              if (process.env.SIGNING_AVAILABLE !== 'true') {
+                core.notice('Scheduled nightlies need APPLE_CERTIFICATE_P12; skipping until it is set.');
+                core.setOutput('has_changes', 'false');
+              } else {
+                core.setOutput('has_changes', await shouldReleaseNightly({ github, context, core }));
+              }
               core.setOutput('ref', context.sha);
             } else if (context.eventName === 'workflow_dispatch' && dispatchChannel === 'stable') {
               const { tag, sha, version } = await resolveLatestNightlyCommit({ github, context, core });
