@@ -7,3 +7,7 @@
 - **pnpm-only manifest fields** (`allowBuilds`, `packageExtensions`, `"-"` removals,
   `minimumReleaseAge`, `supportedArchitectures`) have no bun equivalent. Nested overrides
   (`a>b`) and `catalog:` do work. Keep `pnpm-workspace.yaml.pnpm-reference` for the _why_ comments.
+- **Server tests on macOS.** 9 tests compare `os.tmpdir()` paths literally and fail on the
+  `/var` → `/private/var` symlink; one needs Playwright's chromium. Run them with
+  `TMPDIR=$HOME/t3tmp bun run test` after `bunx playwright-core install chromium-headless-shell`.
+  Pre-existing upstream (their CI is Linux), not a bun regression.

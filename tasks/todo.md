@@ -12,7 +12,7 @@ deferred · separate data home (`T3CODE_HOME`) · mirin consumed via `file:` lin
 - [x] bun workspaces (pruned: no mobile/marketing/infra), catalog, overrides, patches, hoisted linker
 - [x] `bun install` migrates pnpm-lock; all 11 kept patches verified in node_modules
 - [x] `bun run typecheck` green (11 workspaces)
-- [x] `vp test` green: contracts 661, shared 1572, client-runtime 2094, web 6772 · [ ] server
+- [x] `vp test` green: contracts 661, shared 1572, client-runtime 2094, web 6772, server 5990 (macOS needs `TMPDIR=$HOME/t3tmp` + playwright chromium; see lessons)
 - [x] pnpm-lock.yaml dropped, pnpm-workspace kept as `.pnpm-reference`; ci.yml installs bun
 - Acceptance: fresh clone → `bun install && bun run typecheck && bun run test` passes on macOS.
 
