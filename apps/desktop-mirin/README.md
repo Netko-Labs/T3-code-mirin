@@ -44,6 +44,11 @@ updater compares `version.json` in the running app with `stable-darwin-arm64-upd
 there. Without `MIRIN_SIGN_IDENTITY` the build is ad-hoc signed and cannot be notarized or
 updated into.
 
+CI does the same in `.github/workflows/release.yml`: scheduled nightlies (channel `nightly`, feed
+`releases/download/nightly`), stable on dispatch or a `v*.*.*` tag (feed `latest/download`). Secrets:
+`APPLE_CERTIFICATE_P12` (base64 of the Developer ID .p12), `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`.
+
 ## Isolation from an installed T3 Code
 
 Both can run at once: port base 3873 (official: 3773), data in `~/.t3-mirin`, `t3code-mirin://`
