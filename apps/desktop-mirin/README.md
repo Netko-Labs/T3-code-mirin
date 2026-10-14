@@ -6,7 +6,7 @@ served by `apps/server`; this package only hosts them. Design and decisions: `do
 ## Develop
 
 ```sh
-bun install                      # repo root; mirinjs and @mirinjs/cli come through `bun link`
+bun install                      # repo root; mirinjs and @mirinjs/cli come from npm (pinned in package.json)
 (cd apps/web && bun run build)   # the server serves apps/web/dist
 cd apps/desktop-mirin
 bun run dev                      # mirin dev: splash window, then the backend-served UI
