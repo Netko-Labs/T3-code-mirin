@@ -53,3 +53,6 @@ tasks/
 
 # CI checkout of the mirin repo for bun link
 .mirin-dep/
+
+# staged server + bun for the packaged mirin app
+apps/desktop-mirin/vendor/

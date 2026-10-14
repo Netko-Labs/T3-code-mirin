@@ -10,8 +10,9 @@
     "dev": "mirin dev",
     "check": "mirin check",
     "doctor": "mirin doctor",
-    "build": "mirin build",
-    "typecheck": "tsc-rs --noEmit"
+    "build": "bun run stage && mirin build",
+    "typecheck": "tsc-rs --noEmit",
+    "stage": "bun scripts/stage-server.ts"
   },
   "dependencies": {
     "@t3tools/client-runtime": "workspace:*",

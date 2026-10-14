@@ -1,4 +1,5 @@
 import * as NodePath from "node:path";
+import { resolveResource, resolveSidecar } from "mirinjs";
 import { bootstrapRemoteBearerSession } from "@t3tools/client-runtime/authorization";
 import type { DesktopBackendBootstrap, DesktopEnvironmentBootstrap } from "@t3tools/contracts";
 import { PRIMARY_LOCAL_ENVIRONMENT_ID } from "@t3tools/contracts";
@@ -80,10 +81,21 @@ function pipeLines(stream: ReadableStream<Uint8Array>, prefix: string): void {
   })();
 }
 
-/** Dev: the server runs from source with bun. Packaged builds will ship a sidecar. */
-function serverEntry(): { cwd: string; entry: string } {
-  const cwd = NodePath.resolve(process.cwd(), "..", "server");
-  return { cwd, entry: NodePath.resolve(cwd, "src", "bin.ts") };
+interface ServerLaunch {
+  readonly command: string;
+  readonly cwd: string;
+  readonly entry: string;
+}
+
+// Dev (`mirin dev`) runs apps/server from source with the developer's bun;
+// a packaged app runs the staged bundle with the bundled bun sidecar.
+function serverLaunch(): ServerLaunch {
+  if (process.env["MIRIN_DEV_URL"] !== undefined) {
+    const cwd = NodePath.resolve(process.cwd(), "..", "server");
+    return { command: "bun", cwd, entry: NodePath.resolve(cwd, "src", "bin.ts") };
+  }
+  const cwd = resolveResource("server");
+  return { command: resolveSidecar("bun"), cwd, entry: NodePath.join(cwd, "bin.js") };
 }
 
 export async function startBackend(options: StartBackendOptions): Promise<BackendHandle> {
@@ -104,9 +116,9 @@ export async function startBackend(options: StartBackendOptions): Promise<Backen
     tailscaleServePort: 443,
   };
 
-  const { cwd, entry } = serverEntry();
+  const { command, cwd, entry } = serverLaunch();
   options.onStatus(`Starting the backend on port ${port}…`);
-  const proc = Bun.spawn(["bun", entry, "serve", "--bootstrap-fd", "0"], {
+  const proc = Bun.spawn([command, entry, "serve", "--bootstrap-fd", "0"], {
     cwd,
     env: {
       ...process.env,

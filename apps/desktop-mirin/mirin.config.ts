@@ -6,6 +6,10 @@ export default defineConfig({
   main: "main/main.ts",
   // Own scheme on purpose: t3code:// stays with the official app.
   urlSchemes: ["t3code-mirin"],
+  // Packaged builds run the staged server bundle with the bundled bun
+  // (scripts/stage-server.ts fills vendor/). Dev runs apps/server from source.
+  sidecars: { bun: "vendor/bun" },
+  resources: { server: "vendor/server" },
   windows: {
     main: {
       title: "T3 Code Mirin",
