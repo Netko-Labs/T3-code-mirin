@@ -1,8 +1,14 @@
 // Runs only under Bun: `bun scripts/smoke-bun-terminal.ts`. vitest executes on
 // Node, where Bun.Terminal does not exist, so the adapter is proven here.
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 
 import * as BunTerminalAdapter from "../src/terminal/BunTerminalAdapter.ts";
+
+class BunTerminalSmokeFailed extends Schema.TaggedError<BunTerminalSmokeFailed>()(
+  "BunTerminalSmokeFailed",
+  { exitCode: Schema.Number, output: Schema.String },
+) {}
 
 const program = Effect.gen(function* () {
   const adapter = yield* BunTerminalAdapter.make();
@@ -26,12 +32,11 @@ const program = Effect.gen(function* () {
     exit.exitCode === 3 &&
     output.includes("30 100") &&
     output.includes("SMOKE_OK");
-  console.log(
-    ok
-      ? "bun terminal smoke: ok"
-      : `bun terminal smoke: FAILED ${JSON.stringify({ exit, output })}`,
-  );
-  if (!ok) process.exit(1);
+  if (!ok) return yield* new BunTerminalSmokeFailed({ exitCode: exit.exitCode, output });
+  yield* Effect.log("bun terminal smoke: ok");
 });
 
-await Effect.runPromise(program);
+await Effect.runPromise(program).catch((error: unknown) => {
+  process.stderr.write(`bun terminal smoke: FAILED ${String(error)}\n`);
+  process.exit(1);
+});
