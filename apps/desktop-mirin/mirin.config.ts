@@ -8,6 +8,11 @@ export default defineConfig({
   urlSchemes: ["t3code-mirin"],
   // Packaged builds run the staged server bundle with the bundled bun
   // (scripts/stage-server.ts fills vendor/). Dev runs apps/server from source.
+  // Updater artifacts from mirin release, published to the fork's GitHub Releases.
+  release: {
+    baseUrl: "https://github.com/Netko-Labs/T3-code-mirin/releases/latest/download",
+    channel: "stable",
+  },
   sidecars: { bun: "vendor/bun" },
   resources: { server: "vendor/server" },
   windows: {

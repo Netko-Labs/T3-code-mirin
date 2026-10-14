@@ -2,7 +2,6 @@ import type {
   ClientSettings,
   DesktopBridge,
   DesktopServerExposureState,
-  DesktopUpdateState,
   DesktopWslState,
   MirinShellEvents,
   MirinShellRpc,
@@ -46,6 +45,11 @@ export function shellApi(transport: MirinTransport): MirinShellRpc {
     snapShotListPending: call("snapShotListPending"),
     snapShotRead: call("snapShotRead"),
     snapShotAcknowledge: call("snapShotAcknowledge"),
+    updateState: call("updateState"),
+    updateSetChannel: call("updateSetChannel"),
+    updateCheck: call("updateCheck"),
+    updateDownload: call("updateDownload"),
+    updateInstall: call("updateInstall"),
   };
 }
 
@@ -72,25 +76,6 @@ const NO_WSL: DesktopWslState = {
   wslOnly: false,
   distros: [],
   preflightError: null,
-};
-
-const UPDATES_DISABLED: DesktopUpdateState = {
-  enabled: false,
-  status: "disabled",
-  channel: "latest",
-  currentVersion: "0.0.1",
-  hostArch: "arm64",
-  appArch: "arm64",
-  runningUnderArm64Translation: false,
-  availableVersion: null,
-  downloadedVersion: null,
-  releaseNotes: [],
-  omittedReleaseCount: 0,
-  downloadPercent: null,
-  checkedAt: null,
-  message: null,
-  errorContext: null,
-  canRetry: false,
 };
 
 const unsupported = (feature: string) => () =>
@@ -193,14 +178,12 @@ export function createMirinDesktopBridge(
     getWindowFullscreenState: () => false,
     onWindowFullscreenStateChange: noListener,
 
-    getUpdateState: () => Promise.resolve(UPDATES_DISABLED),
-    setUpdateChannel: () => Promise.resolve(UPDATES_DISABLED),
-    checkForUpdate: () => Promise.resolve({ checked: false, state: UPDATES_DISABLED }),
-    downloadUpdate: () =>
-      Promise.resolve({ accepted: false, completed: false, state: UPDATES_DISABLED }),
-    installUpdate: () =>
-      Promise.resolve({ accepted: false, completed: false, state: UPDATES_DISABLED }),
-    onUpdateState: noListener,
+    getUpdateState: () => api.updateState(null),
+    setUpdateChannel: (channel) => api.updateSetChannel(channel),
+    checkForUpdate: () => api.updateCheck(null),
+    downloadUpdate: () => api.updateDownload(null),
+    installUpdate: () => api.updateInstall(null),
+    onUpdateState: (listener) => onShellEvent(transport, "updateStateChanged", listener),
 
     openSystemSettings: (pane) => api.openSystemSettings(pane),
     checkSystemPermission: (pane) => api.checkSystemPermission(pane),
