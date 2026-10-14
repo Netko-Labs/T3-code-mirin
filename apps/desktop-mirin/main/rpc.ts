@@ -1,5 +1,10 @@
 import { join } from "node:path";
-import type { ContextMenuItemSchemaType, PickFolderOptions } from "@t3tools/contracts";
+import {
+  type ContextMenuItemSchemaType,
+  type PickFolderOptions,
+  REMOTE_CAPABLE_EDITOR_IDS,
+  remoteSchemeForEditor,
+} from "@t3tools/contracts";
 import { dialog, menu, type MenuItemTemplate } from "mirinjs";
 import { rpc } from "mirinjs/rpc";
 
@@ -10,9 +15,16 @@ export const T3_HOME = process.env["T3CODE_HOME"] ?? join(process.env["HOME"] ??
 
 const CLIENT_SETTINGS_FILE = join(userDataDir(T3_HOME), "client-settings.json");
 
-const OPEN_EXTERNAL_SCHEMES = new Set(["http:", "https:", "mailto:"]);
-// Editor deep links the web app hands to openExternal.
-const EDITOR_SCHEME = /^[a-z][a-z0-9+.-]*:$/;
+// Web links plus the editor deep-link schemes the web app builds; nothing else leaves the app.
+const OPEN_EXTERNAL_SCHEMES = new Set([
+  "http:",
+  "https:",
+  "mailto:",
+  ...REMOTE_CAPABLE_EDITOR_IDS.flatMap((id) => {
+    const scheme = remoteSchemeForEditor(id);
+    return scheme === undefined ? [] : [`${scheme}:`];
+  }),
+]);
 
 function backend() {
   const running = shell.backend;
@@ -60,10 +72,7 @@ export const router = rpc.router({
     } catch {
       return false;
     }
-    if (!OPEN_EXTERNAL_SCHEMES.has(parsed.protocol) && !EDITOR_SCHEME.test(parsed.protocol)) {
-      return false;
-    }
-    if (parsed.protocol === "file:") return false;
+    if (!OPEN_EXTERNAL_SCHEMES.has(parsed.protocol)) return false;
     const proc = Bun.spawn(["open", parsed.href], { stdout: "ignore", stderr: "ignore" });
     return (await proc.exited) === 0;
   }),

@@ -63,6 +63,7 @@ export default defineConfig({
     environment: "node",
     exclude: [
       "**/.repos/**",
+      "**/.mirin-dep/**",
       "**/.t3/**",
       "**/node_modules/**",
       "**/dist/**",
@@ -113,6 +114,9 @@ export default defineConfig({
     ignorePatterns: [
       ".repos",
       ".repos/**",
+      ".mirin-dep",
+      ".mirin-dep/**",
+      ".mirin-dep/**",
       "dist",
       "dist-electron",
       "node_modules",

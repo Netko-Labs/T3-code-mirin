@@ -50,3 +50,6 @@ node_modules/
 .mirin/
 # agent work artifacts stay out of the tree (AGENTS.md → Plans and work artifacts)
 tasks/
+
+# CI checkout of the mirin repo for bun link
+.mirin-dep/

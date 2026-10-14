@@ -19,7 +19,7 @@ export async function readJsonFile(path: string): Promise<unknown | null> {
 
 export async function writeJsonFile(path: string, value: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  const tmp = `${path}.${process.pid}.tmp`;
+  const tmp = `${path}.${crypto.randomUUID()}.tmp`;
   await Bun.write(tmp, `${JSON.stringify(value, null, 2)}\n`);
   const { rename } = await import("node:fs/promises");
   await rename(tmp, path);
