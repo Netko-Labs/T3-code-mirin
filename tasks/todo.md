@@ -51,3 +51,12 @@ See plan.html.
 - `T3CODE_TELEMETRY_ENABLED=false` on the spawned backend.
 - Never click provider "Update" from the fork; it rewrites the shared `claude`/`codex` binaries.
 - Server tests run with `TMPDIR=$HOME/t3tmp`.
+
+## mirin backlog found while building M2 (file in Netko-Labs/mirin)
+
+- [x] `WindowHandle.loadUrl` was a core stub → Netko-Labs/mirin#9
+- [ ] `bootData` per window (sync facts before page scripts) → replaces the `?mirinBoot=` query param
+- [ ] `menu.popup` should resolve with the clicked id or null on dismiss (no "popup closed" event today)
+- [ ] main-process `console.*` is not in the dev event stream; only `logger` is
+- [ ] origin-scoped preload: `window.mirin` + RPC token must not reach third-party pages (preview tabs)
+- [ ] `shell.openExternal` / `secureStorage` / `app.theme` as proper modules (shell currently spawns `open` and stores JSON)
