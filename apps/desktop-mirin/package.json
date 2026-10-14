@@ -1,6 +1,6 @@
 {
   "name": "@t3tools/desktop-mirin",
-  "version": "0.0.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "exports": {
@@ -11,6 +11,7 @@
     "check": "mirin check",
     "doctor": "mirin doctor",
     "build": "bun run stage && mirin build",
+    "release": "bun run stage && mirin release",
     "typecheck": "tsc-rs --noEmit",
     "stage": "bun scripts/stage-server.ts"
   },

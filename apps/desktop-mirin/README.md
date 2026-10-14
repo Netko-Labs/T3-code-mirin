@@ -27,7 +27,22 @@ bun run build        # stage-server.ts, then mirin build → build/T3 Code Mirin
 (Cursor SDK, Playwright, keyring, fff) into `vendor/server/node_modules`, copies the web build to
 `vendor/server/client`, and copies the host's `bun` to `vendor/bun`. `mirin.config.ts` ships
 `vendor/server` as a resource and `vendor/bun` as a sidecar; the packaged shell runs
-`bun bin.js serve` from there.
+`bun --preload watchdog.js bin.js serve` from there (the watchdog exits the server when the host
+that spawned it is gone).
+
+## Release
+
+```sh
+export MIRIN_SIGN_IDENTITY="Developer ID Application: …"   # keychain identity
+export MIRIN_NOTARY_APPLE_ID=… MIRIN_NOTARY_PASSWORD=… MIRIN_NOTARY_TEAM_ID=…
+bun run release      # signed + notarized .app, updater artifacts in build/release/
+gh release create v<version> build/release/*            # what app.updater polls
+```
+
+`release.baseUrl` in `mirin.config.ts` points at this repo's latest GitHub release; the
+updater compares `version.json` in the running app with `stable-darwin-arm64-update.json`
+there. Without `MIRIN_SIGN_IDENTITY` the build is ad-hoc signed and cannot be notarized or
+updated into.
 
 ## Isolation from an installed T3 Code
 
