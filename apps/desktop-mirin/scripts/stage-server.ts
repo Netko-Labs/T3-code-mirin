@@ -70,6 +70,9 @@ await Bun.write(
 );
 console.log("[stage] installing the server's native externals…");
 await $`bun install --production --no-save`.cwd(out);
+// bun writes absolute symlinks into .bin; nothing in the bundle runs them and
+// they would point outside the signed app.
+NodeFS.rmSync(NodePath.join(out, "node_modules", ".bin"), { recursive: true, force: true });
 
 console.log("[stage] copying the web build…");
 NodeFS.cpSync(webDist, NodePath.join(out, "client"), { recursive: true });
