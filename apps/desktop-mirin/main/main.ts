@@ -1,10 +1,13 @@
 import * as NodeOS from "node:os";
+import * as NodePath from "node:path";
 import { app } from "mirinjs";
 
 import { startActivationBroker } from "./activation.ts";
 import { startBackend } from "./backend.ts";
 import { installApplicationMenu } from "./menu.ts";
-import { router, T3_HOME } from "./rpc.ts";
+import { router, snapShotSettings, T3_HOME } from "./rpc.ts";
+import { readJsonFile, userDataDir } from "./settings.ts";
+import { SnapShotController } from "./snapshot.ts";
 import { shell } from "./state.ts";
 
 const mirin = app.serve(router);
@@ -40,6 +43,18 @@ function uiUrl(): string {
 
 app.on("ready", async () => {
   installApplicationMenu(broadcastMenuAction);
+  // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
+  if (process.platform === "darwin") {
+    const controller = new SnapShotController(T3_HOME, (event) =>
+      mirin.rpc.snapShotEvent.broadcast(event),
+    );
+    shell.snapShots = controller;
+    void controller.start(
+      snapShotSettings(
+        await readJsonFile(NodePath.join(userDataDir(T3_HOME), "client-settings.json")),
+      ),
+    );
+  }
   const window = app.windows.get("main");
   try {
     shell.backend = await startBackend({
@@ -62,6 +77,7 @@ app.on("ready", async () => {
 });
 
 app.on("window-all-closed", () => {
+  shell.snapShots?.stop();
   shell.activation?.stop();
   shell.backend?.stop();
   app.quit();

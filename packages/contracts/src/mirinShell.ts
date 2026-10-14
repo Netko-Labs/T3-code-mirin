@@ -5,8 +5,16 @@ import type {
 import type {
   ContextMenuItemSchemaType,
   DesktopCliCommandState,
+  DesktopPendingSnapShot,
+  DesktopSnapShot,
+  DesktopSnapShotEvent,
+  DesktopSnapShotSetupAction,
+  DesktopSnapShotShortcutAvailability,
+  DesktopSnapShotState,
   PickFolderOptions,
+  SystemSettingsPane,
 } from "./ipc.ts";
+import type { SnapShotShortcut } from "./settings.ts";
 
 /**
  * The RPC surface the mirin desktop shell (apps/desktop-mirin) serves to the
@@ -32,6 +40,18 @@ export interface MirinShellRpc {
   readonly appActivationComplete: (response: DesktopAppActivationResponse) => Promise<void>;
   readonly receiveProviderAuthCallback: (authorizationUrl: string) => Promise<string>;
   readonly cancelProviderAuthCallback: (authorizationUrl: string) => Promise<void>;
+  readonly openSystemSettings: (pane: SystemSettingsPane) => Promise<boolean>;
+  readonly checkSystemPermission: (pane: SystemSettingsPane) => Promise<boolean>;
+  readonly snapShotState: (input: null) => Promise<DesktopSnapShotState>;
+  readonly snapShotSetup: (action: DesktopSnapShotSetupAction) => Promise<void>;
+  readonly snapShotRequestPermissions: (includeAccessibility: boolean) => Promise<void>;
+  readonly snapShotCheckShortcut: (
+    shortcut: SnapShotShortcut,
+  ) => Promise<DesktopSnapShotShortcutAvailability>;
+  readonly snapShotSetSuppressed: (suppressed: boolean) => Promise<void>;
+  readonly snapShotListPending: (input: null) => Promise<readonly DesktopPendingSnapShot[]>;
+  readonly snapShotRead: (id: string) => Promise<DesktopSnapShot>;
+  readonly snapShotAcknowledge: (id: string) => Promise<void>;
 }
 
 export interface MirinShellEvents {
@@ -39,6 +59,7 @@ export interface MirinShellEvents {
   readonly menuAction: { readonly action: string };
   readonly webLinkOpen: { readonly url: string };
   readonly appActivationRequest: DesktopAppActivationRequest;
+  readonly snapShotEvent: DesktopSnapShotEvent;
 }
 
 /** `window.mirin`, installed by mirin's preload bootstrap before page scripts run. */

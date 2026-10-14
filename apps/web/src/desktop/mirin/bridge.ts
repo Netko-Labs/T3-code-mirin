@@ -36,6 +36,16 @@ export function shellApi(transport: MirinTransport): MirinShellRpc {
     appActivationComplete: call("appActivationComplete"),
     receiveProviderAuthCallback: call("receiveProviderAuthCallback"),
     cancelProviderAuthCallback: call("cancelProviderAuthCallback"),
+    openSystemSettings: call("openSystemSettings"),
+    checkSystemPermission: call("checkSystemPermission"),
+    snapShotState: call("snapShotState"),
+    snapShotSetup: call("snapShotSetup"),
+    snapShotRequestPermissions: call("snapShotRequestPermissions"),
+    snapShotCheckShortcut: call("snapShotCheckShortcut"),
+    snapShotSetSuppressed: call("snapShotSetSuppressed"),
+    snapShotListPending: call("snapShotListPending"),
+    snapShotRead: call("snapShotRead"),
+    snapShotAcknowledge: call("snapShotAcknowledge"),
   };
 }
 
@@ -192,6 +202,24 @@ export function createMirinDesktopBridge(
       Promise.resolve({ accepted: false, completed: false, state: UPDATES_DISABLED }),
     onUpdateState: noListener,
 
+    openSystemSettings: (pane) => api.openSystemSettings(pane),
+    checkSystemPermission: (pane) => api.checkSystemPermission(pane),
+    ...(boot.platform === "darwin"
+      ? {
+          requestSnapShotPermissions: (includeAccessibility) =>
+            api.snapShotRequestPermissions(includeAccessibility),
+          getSnapShotState: () => api.snapShotState(null),
+          setupSnapShot: (action) => api.snapShotSetup(action),
+          checkSnapShotShortcut: (shortcut) => api.snapShotCheckShortcut(shortcut),
+          setSnapShotShortcutSuppressed: (suppressed) => api.snapShotSetSuppressed(suppressed),
+          listPendingSnapShots: () => api.snapShotListPending(null),
+          readSnapShot: (id) => api.snapShotRead(id),
+          setSnapShotAnimationDestination: () => Promise.resolve(),
+          dismissSnapShotAnimation: () => Promise.resolve(),
+          acknowledgeSnapShot: (id) => api.snapShotAcknowledge(id),
+          onSnapShotEvent: (listener) => onShellEvent(transport, "snapShotEvent", listener),
+        }
+      : {}),
     receiveProviderAuthCallback: (url) => api.receiveProviderAuthCallback(url),
     cancelProviderAuthCallback: (url) => api.cancelProviderAuthCallback(url),
     cliCommand: {
