@@ -30,7 +30,9 @@ deferred · separate data home (`T3CODE_HOME`) · mirin consumed via `file:` lin
 ## M2 — mirin shell (daily-usable)
 
 - mirin P0s: scoped preload, bootData, shell.openExternal, secureStorage, nativeTheme, notifications polyfill
-- [ ] `apps/desktop-mirin`: config, server spawn (stdin bootstrap), app:// serving web build, desktopBridge subset
+- [x] `apps/desktop-mirin`: splash → `loadUrl` to the backend-served UI; server spawned with a stdin bootstrap; bearer exchange; `desktopBridge` over `window.mirin` (settings, pickFolder, openExternal, context menu, menu actions); SSH/WSL/updates stubbed
+- [x] mirin: `loadUrl` implemented in core (Netko-Labs/mirin PR feat/window-load-url)
+- [x] smoke in the mirin window: Claude Haiku replied, terminal drawer ran a command
 - Acceptance: `cd apps/desktop-mirin && bun run dev` boots; `mirin check` green in CI.
 
 ## M3 — preview parity · M4 — native polish (macOS) · M5 — Linux/Windows
@@ -40,3 +42,12 @@ See plan.html.
 ## Lessons
 
 - (none yet)
+
+## Isolation from the official T3 Code install (always on)
+
+- Backend port base 3873 (official uses 3773); the probe also rejects ports held by a wildcard listener.
+- `T3CODE_HOME=~/.t3-mirin` for every server run (shell, tests, smokes). Never `~/.t3`.
+- No `urlSchemes` in `mirin.config.ts` until a distinct scheme (`t3code-mirin://`) exists; never `t3code://`.
+- `T3CODE_TELEMETRY_ENABLED=false` on the spawned backend.
+- Never click provider "Update" from the fork; it rewrites the shared `claude`/`codex` binaries.
+- Server tests run with `TMPDIR=$HOME/t3tmp`.

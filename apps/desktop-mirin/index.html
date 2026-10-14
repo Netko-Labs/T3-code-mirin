@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>T3 Code Mirin</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0f0f10;
+        color: #d4d4d8;
+        font:
+          14px/1.4 -apple-system,
+          system-ui,
+          sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        -webkit-app-region: drag;
+      }
+      main {
+        text-align: center;
+      }
+      .spin {
+        width: 20px;
+        height: 20px;
+        margin: 0 auto 12px;
+        border: 2px solid #3f3f46;
+        border-top-color: #a1a1aa;
+        border-radius: 50%;
+        animation: s 0.8s linear infinite;
+      }
+      @keyframes s {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      #status {
+        color: #71717a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="spin"></div>
+      <div>T3 Code Mirin</div>
+      <div id="status">Starting the backend…</div>
+    </main>
+    <script type="module" src="/ui/splash.ts"></script>
+  </body>
+</html>

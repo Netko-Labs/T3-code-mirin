@@ -4,6 +4,7 @@
   "workspaces": {
     "packages": [
       "apps/desktop",
+      "apps/desktop-mirin",
       "apps/server",
       "apps/web",
       "packages/*",
