@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import * as NodePath from "node:path";
 import {
   type ContextMenuItemSchemaType,
   type DesktopAppActivationRequest,
@@ -18,9 +18,10 @@ import { cliCommandState, installCliCommand, uninstallCliCommand } from "./cli.t
 import { readJsonFile, userDataDir, writeJsonFile } from "./settings.ts";
 import { shell } from "./state.ts";
 
-export const T3_HOME = process.env["T3CODE_HOME"] ?? join(process.env["HOME"] ?? "~", ".t3-mirin");
+export const T3_HOME =
+  process.env["T3CODE_HOME"] ?? NodePath.join(process.env["HOME"] ?? "~", ".t3-mirin");
 
-const CLIENT_SETTINGS_FILE = join(userDataDir(T3_HOME), "client-settings.json");
+const CLIENT_SETTINGS_FILE = NodePath.join(userDataDir(T3_HOME), "client-settings.json");
 
 // Web links plus the editor deep-link schemes the web app builds; nothing else leaves the app.
 const OPEN_EXTERNAL_SCHEMES = new Set([

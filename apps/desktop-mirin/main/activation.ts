@@ -1,6 +1,6 @@
-import { tmpdir, userInfo } from "node:os";
-import { join } from "node:path";
-import { unlink } from "node:fs/promises";
+import * as NodeFSP from "node:fs/promises";
+import * as NodeOS from "node:os";
+import * as NodePath from "node:path";
 import {
   DESKTOP_APP_ACTIVATION_PROTOCOL_VERSION,
   type DesktopAppActivationRequest,
@@ -60,12 +60,13 @@ export async function startActivationBroker(
 ): Promise<ActivationBroker> {
   const { address } = resolveDesktopAppControlAddress({
     stateDir: userDataDir(home),
+    // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
     platform: process.platform,
-    tempDir: tmpdir(),
-    userId: userInfo().uid,
-    joinPath: join,
+    tempDir: NodeOS.tmpdir(),
+    userId: NodeOS.userInfo().uid,
+    joinPath: NodePath.join,
   });
-  await unlink(address).catch(() => undefined);
+  await NodeFSP.unlink(address).catch(() => undefined);
 
   const pending = new Map<string, Pending>();
   let rendererReady = false;
@@ -126,7 +127,7 @@ export async function startActivationBroker(
     },
     stop: () => {
       server.stop(true);
-      void unlink(address).catch(() => undefined);
+      void NodeFSP.unlink(address).catch(() => undefined);
     },
   };
 }
