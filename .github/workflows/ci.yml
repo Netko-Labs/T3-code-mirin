@@ -38,6 +38,11 @@ jobs:
             exit 1
           fi
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -67,6 +72,11 @@ jobs:
             /*
             !/.repos/
           sparse-checkout-cone-mode: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
@@ -105,6 +115,11 @@ jobs:
             sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
             echo "$?" > "$RUNNER_TEMP/apt-status"
           ) > "$RUNNER_TEMP/apt.log" 2>&1 < /dev/null &
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
@@ -171,6 +186,11 @@ jobs:
             echo "$?" > "$RUNNER_TEMP/apt-status"
           ) > "$RUNNER_TEMP/apt.log" 2>&1 < /dev/null &
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -212,6 +232,11 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -245,6 +270,11 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -256,7 +286,7 @@ jobs:
       # and none of its tests touch the runtime. Only the non-server `test`
       # job, which covers @t3tools/desktop, needs the download.
       - name: Install Chromium for server browser integration tests
-        run: node apps/server/node_modules/playwright-core/cli.js install --with-deps --only-shell chromium
+        run: node node_modules/playwright-core/cli.js install --with-deps --only-shell chromium
 
       - name: Test
         env:
@@ -438,6 +468,11 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
@@ -465,6 +500,11 @@ jobs:
             /*
             !/.repos/
           sparse-checkout-cone-mode: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1

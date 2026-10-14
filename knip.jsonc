@@ -4,6 +4,8 @@
   "rules": { "types": "off", "nsTypes": "off" },
   // These executables are supplied by the OS or installed separately from npm.
   "ignoreBinaries": ["eas", "file", "mkfifo", "pkill", "pkg-config", "plutil", "sips"],
+  // Mobile, marketing and the relay are outside this fork's workspace (plan: desktop on mirin).
+  "ignore": ["apps/mobile/**", "apps/marketing/**", "infra/**"],
   "workspaces": {
     ".": {
       // Keep vendored reference repositories outside the root project.
@@ -71,33 +73,44 @@
       // reports an entire component module when nothing imports it.
       "ignoreIssues": { "src/components/ui/*.tsx": ["exports", "nsExports", "duplicates"] },
     },
-    "apps/mobile": {
-      // Expo loads plugins and the fingerprint config by string; Metro embeds the browser entry in the native WebView.
-      "entry": [
-        "index.ts!",
-        "fingerprint.config.js",
-        "plugins/*.cjs",
-        "scripts/generate-device-stream.mts",
-        "src/features/devices/device-stream.browser.ts!",
-        "src/features/browser/preview-stream.browser.ts!",
-      ],
-      // Fonts are configured as asset paths; Expo autolinks the native packages.
-      "ignoreDependencies": [
-        "@expo-google-fonts/dm-sans",
-        "@t3tools/mobile-review-diff-native",
-        "@t3tools/mobile-terminal-native",
-      ],
-    },
-    "apps/mobile/modules/t3-source-text": {
-      // React Native codegen discovers component specifications by filename.
-      "entry": ["src/*NativeComponent.ts!"],
-    },
-    "infra/relay": {
-      "entry": ["alchemy.run.ts!", "src/persistence/schema.ts!"],
-    },
     "packages/*": {
       // These workspace packages are private to this monorepo.
       "includeEntryExports": true,
+    },
+    // Exports below are consumed only by apps/mobile, which is outside this
+    // fork's workspace; they stay so upstream merges remain clean.
+    "packages/client-runtime": {
+      "includeEntryExports": true,
+      "ignoreIssues": {
+        "src/operations/projects.ts": ["exports"],
+        "src/state/attachments.ts": ["exports"],
+        "src/state/device.ts": ["exports"],
+        "src/state/gitActions.ts": ["exports"],
+        "src/state/models.ts": ["exports"],
+        "src/state/presentation.ts": ["exports"],
+        "src/state/projectGrouping.ts": ["exports"],
+        "src/state/projects.ts": ["exports"],
+        "src/state/shellPullRequests.ts": ["exports"],
+        "src/state/threadSettled.ts": ["exports"],
+        "src/voice-input/*.ts": ["exports", "nsExports"],
+      },
+    },
+    "packages/contracts": {
+      "includeEntryExports": true,
+      "ignoreIssues": {
+        "src/composerContext.ts": ["exports"],
+        "src/relay.ts": ["exports"],
+        "src/settings.ts": ["exports"],
+      },
+    },
+    "packages/shared": {
+      "includeEntryExports": true,
+      "ignoreIssues": {
+        "src/remote.ts": ["exports"],
+        "src/themePalettes.ts": ["exports"],
+        "src/themePreview.ts": ["exports"],
+        "src/threadLinks.ts": ["exports"],
+      },
     },
     "packages/effect-acp": {
       "includeEntryExports": true,
