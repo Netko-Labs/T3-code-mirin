@@ -2,7 +2,6 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as NodeDns from "node:dns";
 import * as NodeOS from "node:os";
-import * as NodeSea from "node:sea";
 
 export const Platform = Context.Reference<NodeJS.Platform>("@t3tools/shared/HostProcess/Platform", {
   defaultValue: () => process.platform,
@@ -69,8 +68,19 @@ export const InvokedAs = Context.Reference<string>("@t3tools/shared/HostProcess/
  * one branches on this: an executable hosts such things as hidden
  * subcommands of itself.
  */
+type BunGlobal = { readonly main: string };
+
+// Bun compiled executables mount their sources on a virtual filesystem; Node single
+// executables answer through node:sea, which Bun does not ship.
+const isSingleExecutable = (): boolean => {
+  const bun = (globalThis as { Bun?: BunGlobal }).Bun;
+  if (bun !== undefined) return bun.main.startsWith("/$bunfs/") || bun.main.startsWith("B:\\~BUN");
+  const sea = process.getBuiltinModule("node:sea") as { isSea(): boolean } | undefined;
+  return sea?.isSea() ?? false;
+};
+
 export const IsExecutable = Context.Reference<boolean>("@t3tools/shared/HostProcess/IsExecutable", {
-  defaultValue: () => NodeSea.isSea(),
+  defaultValue: isSingleExecutable,
 });
 
 /**

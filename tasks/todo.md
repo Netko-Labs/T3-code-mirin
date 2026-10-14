@@ -18,11 +18,14 @@ deferred · separate data home (`T3CODE_HOME`) · mirin consumed via `file:` lin
 
 ## M1 — server on Bun
 
-- [ ] `@effect/platform-node` → `@effect/platform-bun` (≈11 sites); port Windows taskkill patch
-- [ ] `PtyAdapter` on `Bun.Terminal` (POSIX); keep node-pty path for Windows
-- [ ] fff via `bun:ffi`; probe `@napi-rs/keyring`, `@cursor/sdk`, playwright-core under Bun
-- [ ] self-invocation (`process.execPath`) → bun / compiled binary; `bun build --compile` sidecar
-- Acceptance: `bun apps/server/src/bin.ts serve` → browser UI at :3773, one Claude thread + terminal work.
+- [x] server boots under Bun unchanged except `node:sea` (HostProcess.IsExecutable is now runtime-aware)
+- [x] `PtyAdapter` on `Bun.Terminal` (`BunTerminalAdapter`, picked when Bun is the runtime); node-pty stays for Node
+- [x] probes under Bun: @napi-rs/keyring ok, @ff-labs/fff-node (ffi-rs) ok, @cursor/sdk loads, playwright-core ok
+- [x] E2E on Bun: paired UI, Claude Haiku thread answered, terminal drawer ran a command
+- [ ] deferred: `@effect/platform-node` → `platform-bun` (runs fine on Bun as-is; swap when WS perf matters)
+- [ ] deferred to M4: `bun build --compile` sidecar + self-invocation for packaged builds
+- [ ] follow-up: thread title generation warned once (cause truncated by Bun console depth); compare on Node
+- Acceptance met: `cd apps/server && T3CODE_HOME=~/.t3-mirin bun src/bin.ts serve` → UI at :3773 with a Claude thread + terminal.
 
 ## M2 — mirin shell (daily-usable)
 
