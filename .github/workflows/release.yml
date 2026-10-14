@@ -160,12 +160,11 @@ jobs:
         env:
           DISPATCH_VERSION: ${{ inputs.version }}
           NIGHTLY_VERSION: ${{ needs.resolve_commit.outputs.nightly_version }}
-          NIGHTLY_DATE: ${{ github.run_started_at }}
           NIGHTLY_SHA: ${{ needs.resolve_commit.outputs.ref }}
           NIGHTLY_RUN_NUMBER: ${{ github.run_number }}
         run: |
           if [[ "$CHANNEL" == "nightly" ]]; then
-            nightly_date="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$NIGHTLY_DATE" +%Y%m%d)"
+            nightly_date="$(date -u +%Y%m%d)"
             bun scripts/resolve-nightly-release.ts \
               --date "$nightly_date" \
               --run-number "$NIGHTLY_RUN_NUMBER" \
