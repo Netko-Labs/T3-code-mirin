@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-function shellApi(transport: MirinTransport): MirinShellRpc {
+export function shellApi(transport: MirinTransport): MirinShellRpc {
   const call = <K extends keyof MirinShellRpc>(method: K) =>
     ((input: unknown) => transport.call(method, input)) as MirinShellRpc[K];
   return {
@@ -26,7 +26,16 @@ function shellApi(transport: MirinTransport): MirinShellRpc {
     setClientSettings: call("setClientSettings"),
     pickFolder: call("pickFolder"),
     openExternal: call("openExternal"),
+    notify: call("notify"),
     showContextMenu: call("showContextMenu"),
+    cliCommandState: call("cliCommandState"),
+    cliCommandInstall: call("cliCommandInstall"),
+    cliCommandUninstall: call("cliCommandUninstall"),
+    webLinksReady: call("webLinksReady"),
+    appActivationReady: call("appActivationReady"),
+    appActivationComplete: call("appActivationComplete"),
+    receiveProviderAuthCallback: call("receiveProviderAuthCallback"),
+    cancelProviderAuthCallback: call("cancelProviderAuthCallback"),
   };
 }
 
@@ -80,6 +89,36 @@ const unsupported = (feature: string) => () =>
 const noListener = () => () => {};
 
 /** `DesktopBridge` over mirin RPC; the Electron preload's contract, minus preview/SSH/WSL for now. */
+/**
+ * CEF exposes the Notification API but never displays anything (permission
+ * stays "default"). Route it through the shell so thread notifications reach
+ * Notification Center.
+ */
+export function installMirinNotifications(api: MirinShellRpc): void {
+  class MirinNotification extends EventTarget {
+    static readonly permission: NotificationPermission = "granted";
+    static requestPermission(): Promise<NotificationPermission> {
+      return Promise.resolve("granted");
+    }
+    readonly title: string;
+    readonly body: string;
+    readonly tag: string;
+    onclick: ((this: Notification, ev: Event) => unknown) | null = null;
+    onclose: ((this: Notification, ev: Event) => unknown) | null = null;
+    onerror: ((this: Notification, ev: Event) => unknown) | null = null;
+    onshow: ((this: Notification, ev: Event) => unknown) | null = null;
+    constructor(title: string, options: NotificationOptions = {}) {
+      super();
+      this.title = title;
+      this.body = options.body ?? "";
+      this.tag = options.tag ?? "";
+      void api.notify(this.body.length > 0 ? { title, body: this.body } : { title });
+    }
+    close(): void {}
+  }
+  Object.defineProperty(window, "Notification", { value: MirinNotification, configurable: true });
+}
+
 export function createMirinDesktopBridge(
   transport: MirinTransport,
   boot: MirinRendererBoot,
@@ -152,5 +191,22 @@ export function createMirinDesktopBridge(
     installUpdate: () =>
       Promise.resolve({ accepted: false, completed: false, state: UPDATES_DISABLED }),
     onUpdateState: noListener,
+
+    receiveProviderAuthCallback: (url) => api.receiveProviderAuthCallback(url),
+    cancelProviderAuthCallback: (url) => api.cancelProviderAuthCallback(url),
+    cliCommand: {
+      getState: () => api.cliCommandState(null),
+      install: () => api.cliCommandInstall(null),
+      uninstall: () => api.cliCommandUninstall(null),
+    },
+    webLinks: {
+      setReady: (ready) => api.webLinksReady(ready),
+      onOpen: (listener) => onShellEvent(transport, "webLinkOpen", ({ url }) => listener(url)),
+    },
+    appActivation: {
+      setReady: (ready) => api.appActivationReady(ready),
+      complete: (response) => api.appActivationComplete(response),
+      onRequest: (listener) => onShellEvent(transport, "appActivationRequest", listener),
+    },
   };
 }

@@ -4,6 +4,8 @@ export default defineConfig({
   id: "dev.netko-labs.t3-code-mirin",
   name: "T3 Code Mirin",
   main: "main/main.ts",
+  // Own scheme on purpose: t3code:// stays with the official app.
+  urlSchemes: ["t3code-mirin"],
   windows: {
     main: {
       title: "T3 Code Mirin",

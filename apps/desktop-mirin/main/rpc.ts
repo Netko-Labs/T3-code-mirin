@@ -1,13 +1,20 @@
 import { join } from "node:path";
 import {
   type ContextMenuItemSchemaType,
+  type DesktopAppActivationRequest,
+  type DesktopAppActivationResponse,
   type PickFolderOptions,
   REMOTE_CAPABLE_EDITOR_IDS,
   remoteSchemeForEditor,
 } from "@t3tools/contracts";
-import { dialog, menu, type MenuItemTemplate } from "mirinjs";
+import {
+  cancelCodexAuthCallback,
+  receiveCodexAuthCallback,
+} from "@t3tools/shared/codexAuthCallback";
+import { dialog, menu, type MenuItemTemplate, notification } from "mirinjs";
 import { rpc } from "mirinjs/rpc";
 
+import { cliCommandState, installCliCommand, uninstallCliCommand } from "./cli.ts";
 import { readJsonFile, userDataDir, writeJsonFile } from "./settings.ts";
 import { shell } from "./state.ts";
 
@@ -25,6 +32,18 @@ const OPEN_EXTERNAL_SCHEMES = new Set([
     return scheme === undefined ? [] : [`${scheme}:`];
   }),
 ]);
+
+async function openExternal(url: string): Promise<boolean> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (!OPEN_EXTERNAL_SCHEMES.has(parsed.protocol)) return false;
+  const proc = Bun.spawn(["open", parsed.href], { stdout: "ignore", stderr: "ignore" });
+  return (await proc.exited) === 0;
+}
 
 function backend() {
   const running = shell.backend;
@@ -52,6 +71,8 @@ function contextMenuTemplate(
 export const router = rpc.router({
   backendStatus: rpc.event<{ message: string }>(),
   menuAction: rpc.event<{ action: string }>(),
+  webLinkOpen: rpc.event<{ url: string }>(),
+  appActivationRequest: rpc.event<DesktopAppActivationRequest>(),
 
   getBearerToken: rpc.query(async (_: null) => backend().bearerToken()),
 
@@ -65,17 +86,35 @@ export const router = rpc.router({
     return picked?.[0] ?? null;
   }),
 
-  openExternal: rpc.mutation(async (url: string) => {
-    let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return false;
-    }
-    if (!OPEN_EXTERNAL_SCHEMES.has(parsed.protocol)) return false;
-    const proc = Bun.spawn(["open", parsed.href], { stdout: "ignore", stderr: "ignore" });
-    return (await proc.exited) === 0;
+  openExternal: rpc.mutation(async (url: string) => openExternal(url)),
+
+  cliCommandState: rpc.query(async (_: null) => cliCommandState(T3_HOME)),
+  cliCommandInstall: rpc.mutation(async (_: null) =>
+    installCliCommand(T3_HOME, backend().serverEntry),
+  ),
+  cliCommandUninstall: rpc.mutation(async (_: null) => uninstallCliCommand(T3_HOME)),
+
+  webLinksReady: rpc.mutation(async (ready: boolean) => {
+    shell.webLinksReady = ready;
+    if (ready) shell.flushWebLinks();
   }),
+  appActivationReady: rpc.mutation(async (ready: boolean) => shell.activation?.setReady(ready)),
+  appActivationComplete: rpc.mutation(async (response: DesktopAppActivationResponse) =>
+    shell.activation?.complete(response),
+  ),
+
+  // The ChatGPT sign-in redirects to a loopback server this process hosts; the
+  // credentials themselves stay on the backend.
+  receiveProviderAuthCallback: rpc.mutation(async (authorizationUrl: string) =>
+    receiveCodexAuthCallback(authorizationUrl, openExternal),
+  ),
+  cancelProviderAuthCallback: rpc.mutation(async (authorizationUrl: string) =>
+    cancelCodexAuthCallback(authorizationUrl),
+  ),
+
+  notify: rpc.mutation(async (input: { title: string; body?: string }) =>
+    notification.show(input.body === undefined ? { title: input.title } : input),
+  ),
 
   // Resolves with the clicked id; mirin has no "popup dismissed" event yet, so
   // the renderer times the promise out on its next interaction.

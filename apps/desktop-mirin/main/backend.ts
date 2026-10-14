@@ -12,6 +12,8 @@ const READY_TIMEOUT_MS = 60_000;
 
 export interface BackendHandle {
   readonly port: number;
+  /** The CLI entry the `t3-mirin` shim runs. */
+  readonly serverEntry: string;
   readonly httpBaseUrl: string;
   readonly wsBaseUrl: string;
   /** The renderer's bootstrap for the primary environment, minted fresh per call. */
@@ -147,6 +149,7 @@ export async function startBackend(options: StartBackendOptions): Promise<Backen
 
   return {
     port,
+    serverEntry: entry,
     httpBaseUrl,
     wsBaseUrl,
     primaryBootstrap: () => ({
