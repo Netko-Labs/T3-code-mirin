@@ -47,6 +47,7 @@ app.on("ready", async () => {
   const updates = new UpdateBridge();
   updates.onChange((state) => mirin.rpc.updateStateChanged.broadcast(state));
   shell.updates = updates;
+  updates.startPolling();
   // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
   if (process.platform === "darwin") {
     const controller = new SnapShotController(T3_HOME, (event) =>
@@ -81,6 +82,7 @@ app.on("ready", async () => {
 });
 
 app.on("window-all-closed", () => {
+  shell.updates?.stop();
   shell.snapShots?.stop();
   shell.activation?.stop();
   shell.backend?.stop();

@@ -16,6 +16,11 @@ const STATUS: Record<UpdaterStatus, DesktopUpdateStatus> = {
   error: "error",
 };
 
+// Same cadence as the Electron shell: one check shortly after launch, then a
+// slow poll. Downloads stay user-driven from the settings UI.
+const STARTUP_CHECK_DELAY_MS = 15_000;
+const POLL_INTERVAL_MS = 4 * 60_000;
+
 function arch(): DesktopUpdateState["hostArch"] {
   // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
   const value = process.arch;
@@ -32,6 +37,8 @@ export class UpdateBridge {
   #message: string | null = null;
   #errorContext: DesktopUpdateState["errorContext"] = null;
   readonly #listeners = new Set<(state: DesktopUpdateState) => void>();
+  #startupTimer: ReturnType<typeof setTimeout> | null = null;
+  #pollTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     updater.on("status", () => this.#notify());
@@ -43,6 +50,31 @@ export class UpdateBridge {
       this.#message = message;
       this.#notify();
     });
+  }
+
+  startPolling(): void {
+    if (!updater.enabled || this.#pollTimer !== null) return;
+    const poll = () => {
+      void this.check().then((result) => {
+        const version = result.state.availableVersion;
+        console.log(
+          version === null
+            ? `[updates] ${updater.currentVersion} is current (${result.state.status})`
+            : `[updates] ${version} is available, running ${updater.currentVersion}`,
+        );
+      });
+    };
+    this.#startupTimer = setTimeout(poll, STARTUP_CHECK_DELAY_MS);
+    this.#pollTimer = setInterval(poll, POLL_INTERVAL_MS);
+    this.#startupTimer.unref();
+    this.#pollTimer.unref();
+  }
+
+  stop(): void {
+    if (this.#startupTimer !== null) clearTimeout(this.#startupTimer);
+    if (this.#pollTimer !== null) clearInterval(this.#pollTimer);
+    this.#startupTimer = null;
+    this.#pollTimer = null;
   }
 
   onChange(listener: (state: DesktopUpdateState) => void): () => void {
