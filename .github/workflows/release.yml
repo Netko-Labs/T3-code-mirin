@@ -214,15 +214,26 @@ jobs:
 
       - name: Build release artifacts
         working-directory: apps/desktop-mirin
+        shell: bash
         env:
           MIRIN_APP_VERSION: ${{ steps.meta.outputs.version }}
           MIRIN_RELEASE_CHANNEL: ${{ env.CHANNEL }}
           MIRIN_RELEASE_BASE_URL: ${{ steps.meta.outputs.feed }}
-          MIRIN_SIGN_IDENTITY: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
-          MIRIN_NOTARY_APPLE_ID: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_ID || '' }}
-          MIRIN_NOTARY_PASSWORD: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_PASSWORD || '' }}
-          MIRIN_NOTARY_TEAM_ID: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_TEAM_ID || '' }}
-        run: bun run release
+          SIGNED: ${{ steps.signing.outputs.signed == 'true' }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        # Exported only when the certificate was imported: mirin treats any set
+        # MIRIN_SIGN_IDENTITY, even empty, as a Developer ID to sign with.
+        run: |
+          if [[ "$SIGNED" == "true" ]]; then
+            export MIRIN_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
+            export MIRIN_NOTARY_APPLE_ID="$APPLE_ID"
+            export MIRIN_NOTARY_PASSWORD="$APPLE_PASSWORD"
+            export MIRIN_NOTARY_TEAM_ID="$APPLE_TEAM_ID"
+          fi
+          bun run release
 
       - name: Publish release
         shell: bash
