@@ -99,6 +99,8 @@ jobs:
     timeout-minutes: 90
     env:
       CHANNEL: ${{ needs.resolve_commit.outputs.channel }}
+      # `secrets` is not allowed in a step `if`; a job-level env carries the test.
+      SIGNING_AVAILABLE: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -193,7 +195,7 @@ jobs:
 
       - id: signing
         name: Import signing certificate
-        if: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
+        if: env.SIGNING_AVAILABLE == 'true'
         shell: bash
         env:
           P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
