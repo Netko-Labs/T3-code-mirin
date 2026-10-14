@@ -1,0 +1,218 @@
+name: Release
+
+# Nightlies build the default branch on a schedule, gated by
+# .github/scripts/check-nightly-release.cjs (new commits + a six-hour gap).
+# Stable builds the commit the latest nightly shipped (manual dispatch) or the
+# tagged commit (tag push), so stable only ever ships a build nightly users ran.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+      - "!v*-nightly.*"
+      - "!v*-preview.*"
+  schedule:
+    # Avoid minute zero, when GitHub scheduled jobs are busiest.
+    - cron: "8,38 * * * *"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release channel"
+        required: false
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - stable
+      version:
+        description: "Stable version override (for example 0.2.0). Defaults to the version the latest nightly previewed."
+        required: false
+        type: string
+
+concurrency:
+  group: release-${{ (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  resolve_commit:
+    name: Resolve release commit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.resolve.outputs.ref }}
+      nightly_version: ${{ steps.resolve.outputs.nightly_version }}
+      has_changes: ${{ steps.resolve.outputs.has_changes }}
+      channel: ${{ steps.resolve.outputs.channel }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
+
+      - id: resolve
+        name: Resolve release commit
+        uses: actions/github-script@v8
+        env:
+          DISPATCH_CHANNEL: ${{ inputs.channel }}
+        with:
+          script: |
+            const {
+              assertCommitOnDefaultBranch,
+              assertReleaseSource,
+              shouldReleaseNightly,
+              resolveLatestNightlyCommit,
+            } = require('./.github/scripts/check-nightly-release.cjs');
+
+            const dispatchChannel = process.env.DISPATCH_CHANNEL || 'nightly';
+            const releaseChannel = context.eventName === 'schedule'
+              ? 'nightly'
+              : context.eventName === 'workflow_dispatch'
+                ? dispatchChannel
+                : 'stable';
+            core.setOutput('channel', releaseChannel);
+
+            await assertReleaseSource({ github, context, releaseChannel });
+
+            if (context.eventName === 'schedule') {
+              core.setOutput('has_changes', await shouldReleaseNightly({ github, context, core }));
+              core.setOutput('ref', context.sha);
+            } else if (context.eventName === 'workflow_dispatch' && dispatchChannel === 'stable') {
+              const { tag, sha, version } = await resolveLatestNightlyCommit({ github, context, core });
+              await assertCommitOnDefaultBranch({ github, context, sha });
+              core.notice(`Stable release builds ${sha}, the commit shipped by ${tag}.`);
+              core.setOutput('ref', sha);
+              core.setOutput('nightly_version', version);
+            } else {
+              core.setOutput('has_changes', 'true');
+              core.setOutput('ref', context.sha);
+            }
+
+  build_macos:
+    name: Build macOS arm64
+    needs: [resolve_commit]
+    if: |
+      needs.resolve_commit.result == 'success' &&
+      (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      CHANNEL: ${{ needs.resolve_commit.outputs.channel }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve_commit.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+
+      - id: meta
+        name: Resolve release version
+        shell: bash
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
+          NIGHTLY_VERSION: ${{ needs.resolve_commit.outputs.nightly_version }}
+          NIGHTLY_DATE: ${{ github.run_started_at }}
+          NIGHTLY_SHA: ${{ needs.resolve_commit.outputs.ref }}
+          NIGHTLY_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          if [[ "$CHANNEL" == "nightly" ]]; then
+            nightly_date="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$NIGHTLY_DATE" +%Y%m%d)"
+            bun scripts/resolve-nightly-release.ts \
+              --date "$nightly_date" \
+              --run-number "$NIGHTLY_RUN_NUMBER" \
+              --sha "$NIGHTLY_SHA" \
+              --github-output
+            echo "feed=https://github.com/${GITHUB_REPOSITORY}/releases/download/nightly" >> "$GITHUB_OUTPUT"
+          else
+            if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+              raw="${DISPATCH_VERSION:-$NIGHTLY_VERSION}"
+              [[ -n "$raw" ]] || { echo "stable needs a version input or a published nightly" >&2; exit 1; }
+            else
+              raw="$GITHUB_REF_NAME"
+            fi
+            version="${raw#v}"
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid stable version: $raw" >&2; exit 1; }
+            short_sha="${NIGHTLY_SHA:0:12}"
+            {
+              echo "version=$version"
+              echo "tag=v$version"
+              echo "name=T3 Code Mirin $version ($short_sha)"
+              echo "feed=https://github.com/${GITHUB_REPOSITORY}/releases/latest/download"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build web client
+        run: vp run --filter @t3tools/web build
+
+      - id: signing
+        name: Import signing certificate
+        if: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
+        shell: bash
+        env:
+          P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          P12_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          keychain_password="$(uuidgen)"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain"
+          security list-keychain -d user -s "$keychain" login.keychain-db
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build release artifacts
+        working-directory: apps/desktop-mirin
+        env:
+          MIRIN_APP_VERSION: ${{ steps.meta.outputs.version }}
+          MIRIN_RELEASE_CHANNEL: ${{ env.CHANNEL }}
+          MIRIN_RELEASE_BASE_URL: ${{ steps.meta.outputs.feed }}
+          MIRIN_SIGN_IDENTITY: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          MIRIN_NOTARY_APPLE_ID: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_ID || '' }}
+          MIRIN_NOTARY_PASSWORD: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_PASSWORD || '' }}
+          MIRIN_NOTARY_TEAM_ID: ${{ steps.signing.outputs.signed == 'true' && secrets.APPLE_TEAM_ID || '' }}
+        run: bun run release
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          NAME: ${{ steps.meta.outputs.name }}
+          REF: ${{ needs.resolve_commit.outputs.ref }}
+          SIGNED: ${{ steps.signing.outputs.signed == 'true' }}
+        run: |
+          cd apps/desktop-mirin/build/release
+          notes="Built from ${REF}."
+          if [[ "$SIGNED" != "true" ]]; then
+            # An ad-hoc build cannot be notarized or updated into: ship the
+            # installer for inspection only, no updater manifest.
+            rm -f -- *-update.json *.patch *.tar.zst
+            notes="$notes Unsigned build: APPLE_CERTIFICATE_P12 is not configured, so this release carries no updater feed."
+          fi
+          if [[ "$CHANNEL" == "nightly" ]]; then
+            gh release create "$TAG" ./* --target "$REF" --title "$NAME" --notes "$notes" --prerelease --latest=false
+            if [[ "$SIGNED" == "true" ]]; then
+              # The rolling feed nightly builds poll: one release, always the newest artifacts.
+              gh release delete nightly --cleanup-tag --yes || true
+              gh release create nightly ./* --target "$REF" --title "Nightly feed ($TAG)" --notes "Updater feed for the nightly channel. Install from $TAG instead." --prerelease --latest=false
+            fi
+          else
+            gh release create "$TAG" ./* --target "$REF" --title "$NAME" --notes "$notes" --latest
+          fi
