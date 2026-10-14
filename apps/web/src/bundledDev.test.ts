@@ -155,9 +155,7 @@ it("hot updates Tailwind classes when a source file changes in bundled dev", asy
       customLogger: logger,
       resolve: {
         alias: {
-          tailwindcss: NodeURL.fileURLToPath(
-            new URL("../node_modules/tailwindcss/index.css", import.meta.url),
-          ),
+          tailwindcss: NodeURL.fileURLToPath(import.meta.resolve("tailwindcss/index.css")),
         },
       },
       experimental: { bundledDev: true },
