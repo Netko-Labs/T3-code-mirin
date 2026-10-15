@@ -363,3 +363,56 @@ it.effect.each([
     });
   }).pipe(Effect.scoped),
 );
+
+it.effect("completes the upgrade before the viewer attaches", () =>
+  Effect.gen(function* () {
+    const opened = Promise.withResolvers<void>();
+    const output = yield* Queue.make<ServerBrowser.ServerBrowserViewerOutput>();
+    yield* Queue.offer(output, { _tag: "viewport", width: 1280, height: 800 });
+    const browser = ServerBrowser.ServerBrowser.of({
+      clearProfile: () => Effect.void,
+      reportProfiles: () => Effect.void,
+      openDownload: () => Effect.succeedNone,
+      answerFileChooser: () => Effect.succeed(false),
+      // Launching a browser is I/O, and Bun drops a handshake that waits on it.
+      attachViewer: () =>
+        Effect.promise(() => opened.promise).pipe(Effect.as({ output, input: () => Effect.void })),
+    });
+    const services = yield* Layer.build(
+      HttpRouter.serve(
+        routeLayer.pipe(
+          Layer.provide(Layer.succeed(ServerBrowser.ServerBrowser, browser)),
+          Layer.provide(platformLayer),
+        ),
+        { disableListenLog: true },
+      ).pipe(
+        Layer.provideMerge(NodeHttpServer.layerTest),
+        Layer.provide(makeAuth([AuthOrchestrationReadScope]).layer),
+      ),
+    );
+    const server = Context.get(services, HttpServer.HttpServer);
+    const origin = HttpServer.formatAddress(server.address).replace(/^http/, "ws");
+    const viewport = Promise.withResolvers<unknown>();
+    yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        const socket = new WebSocket(
+          `${origin}/api/preview-stream/ws?threadId=thread&tabId=tab&wsTicket=one-use-ticket`,
+        );
+        socket.addEventListener("open", () => opened.resolve());
+        socket.addEventListener("message", (event) =>
+          viewport.resolve(JSON.parse(String(event.data))),
+        );
+        socket.addEventListener("close", (event) =>
+          viewport.reject(new Error(`closed with ${event.code}`)),
+        );
+        return socket;
+      }),
+      (socket) => Effect.sync(() => socket.close()),
+    );
+    expect(yield* Effect.promise(() => viewport.promise)).toEqual({
+      type: "viewport",
+      width: 1280,
+      height: 800,
+    });
+  }).pipe(Effect.scoped),
+);
