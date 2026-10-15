@@ -2,7 +2,7 @@ import * as NodePath from "node:path";
 import { resolveResource, resolveSidecar } from "mirinjs";
 import { bootstrapRemoteBearerSession } from "@t3tools/client-runtime/authorization";
 import type { DesktopBackendBootstrap, DesktopEnvironmentBootstrap } from "@t3tools/contracts";
-import { PRIMARY_LOCAL_ENVIRONMENT_ID } from "@t3tools/contracts";
+import { PRIMARY_LOCAL_ENVIRONMENT_ID, SERVER_EXIT_CODE_STATE_DIR_OWNED } from "@t3tools/contracts";
 import { currentDesktopBootstrapToken } from "@t3tools/shared/desktopBootstrapToken";
 import * as Effect from "effect/Effect";
 import { FetchHttpClient } from "effect/http";
@@ -50,10 +50,14 @@ async function findFreePort(start: number): Promise<number> {
   throw new Error(`No free port in ${start}–${start + 49}`);
 }
 
-async function waitForReady(httpBaseUrl: string, isAlive: () => boolean): Promise<void> {
+async function waitForReady(
+  httpBaseUrl: string,
+  exitMessage: () => string | undefined,
+): Promise<void> {
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    if (!isAlive()) throw new Error("The backend exited before it became ready.");
+    const exited = exitMessage();
+    if (exited !== undefined) throw new Error(exited);
     try {
       const res = await fetch(`${httpBaseUrl}/.well-known/t3/environment`, {
         signal: AbortSignal.timeout(1000),
@@ -145,13 +149,16 @@ export async function startBackend(options: StartBackendOptions): Promise<Backen
   });
   pipeLines(proc.stdout, "[backend]");
   pipeLines(proc.stderr, "[backend!]");
-  let exited = false;
+  let exitMessage: string | undefined;
   void proc.exited.then((code) => {
-    exited = true;
-    options.onStatus(`The backend exited with code ${code}.`);
+    exitMessage =
+      code === SERVER_EXIT_CODE_STATE_DIR_OWNED
+        ? `Another T3 Code server is using ${options.home}. Stop it or set a separate T3CODE_HOME.`
+        : `The backend exited with code ${code}.`;
+    options.onStatus(exitMessage);
   });
 
-  await waitForReady(httpBaseUrl, () => !exited);
+  await waitForReady(httpBaseUrl, () => exitMessage);
   options.onStatus("Backend ready, loading the app…");
 
   let bearer: Promise<string> | undefined;
@@ -186,7 +193,7 @@ export async function startBackend(options: StartBackendOptions): Promise<Backen
     }),
     bearerToken,
     stop: () => {
-      if (!exited) proc.kill();
+      if (exitMessage === undefined) proc.kill();
     },
   };
 }
