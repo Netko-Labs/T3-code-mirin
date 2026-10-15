@@ -51,7 +51,24 @@ const serverPackage = (await Bun.file(NodePath.join(serverDir, "package.json")).
   version: string;
   dependencies: Record<string, string>;
 };
-const dependencies = selectCliRuntimeExternalDependencies(serverPackage.dependencies);
+const rootPackage = (await Bun.file(
+  NodePath.resolve(appDir, "..", "..", "package.json"),
+).json()) as {
+  workspaces: { catalog: Record<string, string> };
+};
+// The staged package installs outside the workspace, so `catalog:` specs must
+// become the versions the root catalog pins.
+const resolveCatalogSpec = (name: string, spec: string): string => {
+  if (spec !== "catalog:") return spec;
+  const pinned = rootPackage.workspaces.catalog[name];
+  if (pinned === undefined) throw new Error(`${name} is not in the root catalog`);
+  return pinned;
+};
+const dependencies = Object.fromEntries(
+  Object.entries(selectCliRuntimeExternalDependencies(serverPackage.dependencies)).map(
+    ([name, spec]) => [name, resolveCatalogSpec(name, spec)],
+  ),
+);
 await Bun.write(
   NodePath.join(out, "package.json"),
   `${JSON.stringify(
