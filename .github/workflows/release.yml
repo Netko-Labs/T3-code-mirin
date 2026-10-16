@@ -171,6 +171,10 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           fi
 
+      # Server and web report this version, so the UI brands nightlies as such.
+      - name: Stamp release version
+        run: bun scripts/update-release-package-versions.ts "${{ steps.meta.outputs.version }}"
+
       - name: Build web client
         run: vp run --filter @t3tools/web build
 

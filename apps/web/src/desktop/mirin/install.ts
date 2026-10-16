@@ -5,7 +5,9 @@ import { createMirinDesktopBridge, installMirinNotifications, shellApi } from ".
 // the traffic lights (window zoom is 1 under mirin).
 const MACOS_WINDOW_CONTROLS_INSET = "90px";
 
-// Runs before env.ts samples window.desktopBridge: main.tsx imports this first.
+// Runs before env.ts samples window.desktopBridge. bootstrap.ts imports this
+// statically and main.tsx dynamically, so it precedes every shared chunk;
+// importing it from main.tsx is too late once the bundle splits env.ts out.
 const transport = typeof window === "undefined" ? undefined : window.mirin;
 if (transport !== undefined && window.desktopBridge === undefined) {
   const boot = readMirinRendererBoot();

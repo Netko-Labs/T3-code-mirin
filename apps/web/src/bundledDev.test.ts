@@ -28,8 +28,17 @@ it("initializes React refresh before a shared UI chunk runs in bundled dev", asy
 
   try {
     await NodeFSP.mkdir(NodePath.join(root, "src/lib"), { recursive: true });
+    await NodeFSP.mkdir(NodePath.join(root, "src/desktop/mirin"), { recursive: true });
     await NodeFSP.writeFile(NodePath.join(root, "package.json"), '{"type":"module"}');
-    for (const file of ["index.html", "src/bootstrap.ts", "src/lib/bootError.ts"]) {
+    // The mirin bridge install rides the entry; without window.mirin it is a no-op.
+    for (const file of [
+      "index.html",
+      "src/bootstrap.ts",
+      "src/lib/bootError.ts",
+      "src/desktop/mirin/install.ts",
+      "src/desktop/mirin/boot.ts",
+      "src/desktop/mirin/bridge.ts",
+    ]) {
       await NodeFSP.copyFile(new URL(`../${file}`, import.meta.url), NodePath.join(root, file));
     }
     await NodeFSP.writeFile(
