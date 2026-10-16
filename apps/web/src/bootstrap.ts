@@ -1,3 +1,5 @@
+import "./desktop/mirin/install";
+
 import { showBootError } from "./lib/bootError";
 
 // Bundled dev can move UI code into shared chunks. Load it only after this

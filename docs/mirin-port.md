@@ -19,10 +19,16 @@ flowchart LR
 
 - The window opens on a bundled splash, then loads the UI **from the server** (`http://127.0.0.1:<port>`),
   exactly like the browser mode `npx t3` offers. There is no custom asset scheme to maintain.
+- Branding follows the build version like the Electron shell: `mirin dev` is Dev, a
+  `*-nightly.<date>.<n>` version is Nightly, anything else Alpha. The release workflow stamps that
+  version into the server and web packages too, and `mirin.config.ts` picks the matching icon from
+  upstream's `assets/`.
 - The renderer's synchronous facts (branding, environment bootstraps, locale, platform) travel in a
   `?mirinBoot=` query parameter on that first navigation and are stripped before the router runs.
 - `apps/web/src/desktop/mirin` installs `window.desktopBridge` before `env.ts` samples it, so the
-  web app runs in desktop mode unchanged. The bridge is typed by `MirinShellRpc` in
+  web app runs in desktop mode unchanged. It is imported from `bootstrap.ts`, the bundle entry:
+  the production build splits `env.ts` into a shared chunk that runs before `main.tsx`, so an
+  import there was too late (the titlebar inset and the stage theme both read `isElectron`). The bridge is typed by `MirinShellRpc` in
   `packages/contracts`; the web build never imports `mirinjs` (Bun's ambient types would leak into
   the browser typecheck).
 

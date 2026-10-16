@@ -1,9 +1,10 @@
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
-import { app } from "mirinjs";
+import { app, updater } from "mirinjs";
 
 import { startActivationBroker } from "./activation.ts";
 import { startBackend } from "./backend.ts";
+import { resolveAppBranding } from "./branding.ts";
 import { installApplicationMenu } from "./menu.ts";
 import { router, snapShotSettings, T3_HOME } from "./rpc.ts";
 import { readJsonFile, userDataDir } from "./settings.ts";
@@ -32,7 +33,8 @@ function uiUrl(): string {
   const backend = shell.backend;
   if (!backend) throw new Error("backend not started");
   const boot = {
-    branding: { baseName: "T3 Code", stageLabel: "Dev", displayName: "T3 Code Mirin" },
+    // version.json is the packaged build's own version (mirin build embeds it).
+    branding: resolveAppBranding({ isDev: app.isDev, version: updater.currentVersion }),
     // oxlint-disable-next-line t3code/no-global-process-runtime -- The shell is a mirin app, not Effect code.
     platform: process.platform,
     locale: Intl.DateTimeFormat().resolvedOptions().locale,
