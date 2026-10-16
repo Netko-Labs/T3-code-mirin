@@ -103,7 +103,9 @@ jobs:
     if: |
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
-    runs-on: macos-15
+    # Xcode 26 compiles the Icon Composer .icon document (macOS 26 appearance
+    # variants); macos-15 only carries Xcode 16 and falls back to the flat PNG.
+    runs-on: macos-26
     timeout-minutes: 90
     env:
       CHANNEL: ${{ needs.resolve_commit.outputs.channel }}
