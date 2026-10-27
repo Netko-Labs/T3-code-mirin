@@ -326,6 +326,8 @@ jobs:
     name: Check
     if: ${{ always() }}
     needs: [lint, typecheck, test, test_web, test_server, transfer-report, rust]
+    # Shares the free GitHub-hosted queue with the PR bots. If a stalled queue
+    # fails this gate on a green run, re-run it rather than paying for runners.
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
